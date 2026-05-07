@@ -3,6 +3,7 @@
 from backend.models.analytics_event import AnalyticsEvent
 from backend.models.api_key import ApiKey
 from backend.models.audit_log import AuditLog
+from backend.models.conversation_template import ConversationTemplate
 from backend.models.database import Base, SessionLocal, engine, get_db, init_db
 from backend.models.document import Document
 from backend.models.subscription import Subscription
@@ -24,4 +25,5 @@ __all__ = [
     "AnalyticsEvent",
     "AuditLog",
     "ApiKey",
+    "ConversationTemplate",
 ]

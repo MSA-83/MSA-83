@@ -11,7 +11,7 @@ from backend.middleware.analytics import AnalyticsMiddleware
 from backend.middleware.errors import setup_error_handlers
 from backend.middleware.rate_limit import RateLimitMiddleware
 from backend.middleware.security import setup_security_middleware
-from backend.routers import admin, agents, api_keys, auth, billing, chat, conversations, export, health, memory, oauth, websocket
+from backend.routers import admin, agents, api_keys, auth, billing, chat, conversations, export, health, memory, oauth, templates, websocket
 from backend.services.analytics.analytics_service import AnalyticsService
 from backend.services.openapi import customize_openapi
 from backend.utils.api_versioning import API_V1_PREFIX
@@ -23,8 +23,10 @@ async def lifespan(app: FastAPI):
     from backend.models.database import engine, init_db
     from backend.services.logging.logger import titanium_logger
     from backend.services.observability.otel import setup_opentelemetry
+    from backend.services.template_service import template_service
 
     init_db()
+    template_service.ensure_system_templates()
     setup_opentelemetry(app, engine=engine)
     titanium_logger.info("Titanium backend started", version="0.1.0")
     yield
@@ -79,6 +81,7 @@ app.include_router(websocket.router, tags=["websocket"])
 app.include_router(conversations.router, prefix="/api/conversations", tags=["conversations"])
 app.include_router(export.router, prefix="/api/export", tags=["export"])
 app.include_router(api_keys.router, tags=["api-keys"])
+app.include_router(templates.router, tags=["templates"])
 
 app.include_router(health.router, prefix=f"{API_V1_PREFIX}", tags=["health-v1"])
 app.include_router(admin.router, prefix=f"{API_V1_PREFIX}", tags=["admin-v1"])
