@@ -5,6 +5,8 @@ from backend.models.document import Document
 from backend.models.subscription import Subscription
 from backend.models.task import Task
 from backend.models.user import TierLevel, User, UserUsage
+from backend.models.analytics_event import AnalyticsEvent
+from backend.models.audit_log import AuditLog
 
 __all__ = [
     "Base",
@@ -18,4 +20,6 @@ __all__ = [
     "Document",
     "Task",
     "Subscription",
+    "AnalyticsEvent",
+    "AuditLog",
 ]

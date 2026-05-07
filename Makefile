@@ -85,11 +85,20 @@ clean:
 	@echo "Clean complete"
 
 migrate:
-	@.venv/bin/python -m alembic -c backend/migrations/alembic.ini upgrade head
+	@.venv/bin/alembic -c backend/migrations/alembic.ini upgrade head
 
 migrate-create:
 	@read -p "Migration name: " name; \
-	.venv/bin/python -m alembic -c backend/migrations/alembic.ini revision --autogenerate -m "$$name"
+	.venv/bin/alembic -c backend/migrations/alembic.ini revision --autogenerate -m "$$name"
+
+migrate-down:
+	@.venv/bin/alembic -c backend/migrations/alembic.ini downgrade -1
+
+migrate-status:
+	@.venv/bin/alembic -c backend/migrations/alembic.ini current
+
+migrate-history:
+	@.venv/bin/alembic -c backend/migrations/alembic.ini history
 
 seed:
 	@.venv/bin/python deployment/scripts/seed_memory.py
