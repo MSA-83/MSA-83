@@ -10,6 +10,7 @@ import Login from './pages/Login'
 import OAuthCallback from './pages/OAuthCallback'
 import Admin from './pages/Admin'
 import Settings from './pages/Settings'
+import ApiKeysSettings from './pages/ApiKeysSettings'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
       <Route path="/billing" element={<Layout><Billing /></Layout>} />
       <Route path="/admin" element={<Layout><Admin /></Layout>} />
       <Route path="/settings" element={<Layout><Settings /></Layout>} />
+      <Route path="/settings/api-keys" element={<Layout><ApiKeysSettings /></Layout>} />
     </Routes>
   )
 }

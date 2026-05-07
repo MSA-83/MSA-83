@@ -1,6 +1,7 @@
 """Database models package."""
 
 from backend.models.analytics_event import AnalyticsEvent
+from backend.models.api_key import ApiKey
 from backend.models.audit_log import AuditLog
 from backend.models.database import Base, SessionLocal, engine, get_db, init_db
 from backend.models.document import Document
@@ -22,4 +23,5 @@ __all__ = [
     "Subscription",
     "AnalyticsEvent",
     "AuditLog",
+    "ApiKey",
 ]

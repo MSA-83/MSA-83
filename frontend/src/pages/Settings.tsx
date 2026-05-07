@@ -191,6 +191,9 @@ export default function SettingsPage() {
               <button onClick={handleReset} className="btn-secondary w-full">
                 Reset to Defaults
               </button>
+              <a href="/settings/api-keys" className="btn-secondary w-full block text-center">
+                Manage API Keys →
+              </a>
               <button
                 onClick={() => {
                   localStorage.clear()
