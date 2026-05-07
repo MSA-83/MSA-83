@@ -11,6 +11,7 @@ from backend.security.input_validation import validator as input_validator
 from backend.security.prompt_injection import detector as injection_detector
 from backend.services.llm import llm_router
 from backend.services.rag_service import RAGService
+from backend.services.webhook_service import webhook_service
 
 router = APIRouter()
 
@@ -118,6 +119,30 @@ async def chat(request: ChatRequest):
                 "role": "assistant",
                 "content": response.content,
             }
+        )
+
+        # Dispatch webhooks for message events
+        import asyncio
+        asyncio.create_task(
+            webhook_service.dispatch(
+                "chat.message.sent",
+                {
+                    "conversation_id": conversation_id,
+                    "message": request.message[:500],
+                    "model": response.model,
+                    "tokens_used": response.tokens_used,
+                },
+            )
+        )
+        asyncio.create_task(
+            webhook_service.dispatch(
+                "chat.message.received",
+                {
+                    "conversation_id": conversation_id,
+                    "response_length": len(response.content),
+                    "model": response.model,
+                },
+            )
         )
 
         return ChatResponse(

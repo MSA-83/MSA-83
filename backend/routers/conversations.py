@@ -1,9 +1,12 @@
 """Conversations router for chat history management."""
 
+import asyncio
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from backend.services.conversation_service import conversation_service
+from backend.services.webhook_service import webhook_service
 
 router = APIRouter()
 
@@ -39,6 +42,16 @@ async def create_conversation(request: CreateConversationRequest):
     conversation = conversation_service.create_conversation(
         user_id="anonymous",
         title=request.title,
+    )
+    asyncio.create_task(
+        webhook_service.dispatch(
+            "conversation.created",
+            {
+                "conversation_id": conversation["id"],
+                "title": conversation.get("title", ""),
+                "user_id": "anonymous",
+            },
+        )
     )
     return conversation
 

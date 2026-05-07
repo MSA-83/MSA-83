@@ -18,6 +18,7 @@ if config.config_file_name is not None:
 from backend.models.database import Base
 
 # Import all models so Alembic can detect them
+from backend.models.webhook import Webhook  # noqa: F401
 
 target_metadata = Base.metadata
 

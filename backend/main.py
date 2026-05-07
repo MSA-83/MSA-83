@@ -11,7 +11,7 @@ from backend.middleware.analytics import AnalyticsMiddleware
 from backend.middleware.errors import setup_error_handlers
 from backend.middleware.rate_limit import RateLimitMiddleware
 from backend.middleware.security import setup_security_middleware
-from backend.routers import admin, agents, api_keys, auth, billing, chat, conversations, export, health, memory, oauth, templates, websocket
+from backend.routers import admin, agents, api_keys, auth, billing, chat, conversations, export, health, memory, oauth, templates, webhooks, websocket
 from backend.services.analytics.analytics_service import AnalyticsService
 from backend.services.openapi import customize_openapi
 from backend.utils.api_versioning import API_V1_PREFIX
@@ -82,6 +82,7 @@ app.include_router(conversations.router, prefix="/api/conversations", tags=["con
 app.include_router(export.router, prefix="/api/export", tags=["export"])
 app.include_router(api_keys.router, tags=["api-keys"])
 app.include_router(templates.router, tags=["templates"])
+app.include_router(webhooks.router, prefix="/api", tags=["webhooks"])
 
 app.include_router(health.router, prefix=f"{API_V1_PREFIX}", tags=["health-v1"])
 app.include_router(admin.router, prefix=f"{API_V1_PREFIX}", tags=["admin-v1"])
@@ -93,6 +94,7 @@ app.include_router(agents.router, prefix=f"{API_V1_PREFIX}/agents", tags=["agent
 app.include_router(billing.router, prefix=f"{API_V1_PREFIX}/billing", tags=["billing-v1"])
 app.include_router(conversations.router, prefix=f"{API_V1_PREFIX}/conversations", tags=["conversations-v1"])
 app.include_router(export.router, prefix=f"{API_V1_PREFIX}/export", tags=["export-v1"])
+app.include_router(webhooks.router, prefix=f"{API_V1_PREFIX}", tags=["webhooks-v1"])
 
 
 @app.get("/")
