@@ -10,14 +10,11 @@ from pydantic import BaseModel
 
 from backend.security.input_validation import validator as input_validator
 from backend.security.prompt_injection import detector as injection_detector
-from backend.services.ollama_service import OllamaService
+from backend.services.llm import llm_router
 from backend.services.rag_service import RAGService
 
 router = APIRouter()
 
-ollama_service = OllamaService(
-    base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-)
 rag_service = RAGService()
 
 _conversation_store: dict[str, list[dict]] = {}
@@ -86,19 +83,22 @@ async def chat(request: ChatRequest):
                 rag_sources = []
 
         try:
-            response = await ollama_service.generate(
+            response = await llm_router.generate(
                 prompt=request.message,
-                context=context,
+                system_prompt=None,
                 model=request.model,
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
             )
-        except Exception:
-            response = {
-                "response": f"AI service is currently unavailable. Your message was: {request.message[:50]}...",
-                "model": request.model or ollama_service.default_model,
-                "tokens_used": 0,
-            }
+        except Exception as e:
+            default_model = llm_router._get_default_model()
+            response_content = f"AI service is currently unavailable. Your message was: {request.message[:50]}..."
+            response = type('LLMResponse', (), {
+                'content': response_content,
+                'model': request.model or default_model,
+                'tokens_used': 0,
+                'provider': 'fallback',
+            })()
 
         conversation_id = request.conversation_id or str(uuid.uuid4())[:8]
         if conversation_id not in _conversation_store:
@@ -110,14 +110,14 @@ async def chat(request: ChatRequest):
         })
         _conversation_store[conversation_id].append({
             "role": "assistant",
-            "content": response["response"],
+            "content": response.content,
         })
 
         return ChatResponse(
-            response=response["response"],
-            model=response["model"],
+            response=response.content,
+            model=response.model,
             conversation_id=conversation_id,
-            tokens_used=response.get("tokens_used", 0),
+            tokens_used=response.tokens_used,
             rag_context_used=context is not None,
             sources=rag_sources,
         )
@@ -155,7 +155,7 @@ async def chat_stream(request: ChatRequest):
             except Exception:
                 pass
 
-        model_name = request.model or ollama_service.default_model
+        model_name = request.model or llm_router._get_default_model()
 
         metadata_event = json.dumps({
             "type": "metadata",
@@ -165,11 +165,20 @@ async def chat_stream(request: ChatRequest):
         })
         yield f"data: {metadata_event}\n\n"
 
+        system_prompt = None
+        if context:
+            system_prompt = (
+                "Use the following context to inform your response. "
+                "If the context doesn't contain relevant information, "
+                "rely on your general knowledge.\n\n"
+                f"Context:\n{context}"
+            )
+
         full_response = ""
         try:
-            async for chunk in ollama_service.generate_stream(
+            async for chunk in llm_router.generate_stream(
                 prompt=request.message,
-                context=context,
+                system_prompt=system_prompt,
                 model=request.model,
                 temperature=request.temperature,
             ):
@@ -254,13 +263,13 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
             await websocket.send_json({"type": "typing_indicator", "status": "thinking"})
 
             try:
-                response = await ollama_service.chat(
-                    model=data.get("model", "llama3"),
+                response = await llm_router.chat(
+                    model=data.get("model", llm_router._get_default_model()),
                     messages=[{"role": m["role"], "content": m["content"]} for m in _conversation_store[conversation_id]],
                     temperature=data.get("temperature", 0.7),
                 )
 
-                assistant_text = response.get("message", {}).get("content", "")
+                assistant_text = response.content
 
                 await websocket.send_json({
                     "type": "message",
@@ -353,9 +362,28 @@ async def delete_conversation(conversation_id: str):
 
 @router.get("/models")
 async def list_models():
-    """List available Ollama models."""
-    try:
-        models = await ollama_service.list_models()
-        return {"models": models, "default": ollama_service.default_model}
-    except Exception:
-        return {"models": [ollama_service.default_model], "default": ollama_service.default_model}
+    """List all available models across providers."""
+    all_models = llm_router.get_all_models()
+    available_providers = await llm_router.get_available_providers()
+
+    return {
+        "models": [
+            {
+                "name": m.name,
+                "provider": m.provider,
+                "context_window": m.context_window,
+                "max_output_tokens": m.max_output_tokens,
+                "supports_streaming": m.supports_streaming,
+                "supports_function_calling": m.supports_function_calling,
+                "supports_vision": m.supports_vision,
+                "is_free": m.is_free,
+                "cost_per_1m_input": m.cost_per_1m_input,
+                "cost_per_1m_output": m.cost_per_1m_output,
+                "description": m.description,
+                "available": m.provider in available_providers,
+            }
+            for m in all_models
+        ],
+        "default": llm_router._get_default_model(),
+        "available_providers": available_providers,
+    }
