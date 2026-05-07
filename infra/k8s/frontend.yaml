@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: titanium-frontend
+  namespace: titanium
+  labels:
+    app: titanium-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: titanium-frontend
+  template:
+    metadata:
+      labels:
+        app: titanium-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: titanium-frontend:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: titanium-frontend-service
+  namespace: titanium
+spec:
+  selector:
+    app: titanium-frontend
+  ports:
+    - port: 3000
+      targetPort: 3000
+  type: ClusterIP

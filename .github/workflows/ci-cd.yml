@@ -1,0 +1,248 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: titanium
+
+jobs:
+  lint-backend:
+    name: Lint Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install ruff mypy
+          pip install -r backend/requirements.txt
+          pip install -r memory/requirements.txt
+
+      - name: Run ruff linter
+        run: ruff check backend/ memory/ agents/
+
+      - name: Run type checks
+        run: mypy backend/ memory/ agents/ --ignore-missing-imports
+
+  lint-frontend:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+        working-directory: frontend
+
+      - name: Run ESLint
+        run: npx eslint src --ext ts,tsx
+        working-directory: frontend
+
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    needs: lint-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install pytest pytest-asyncio pytest-cov httpx
+          pip install -r backend/requirements.txt
+          pip install -r memory/requirements.txt
+
+      - name: Run unit tests
+        run: pytest backend/tests/ -v --cov=backend --cov=memory --cov=agents --cov-report=xml --ignore=backend/tests/e2e --ignore=backend/tests/test_security_integration.py
+
+      - name: Run contract tests
+        run: pytest backend/tests/test_api_contracts.py -v
+
+      - name: Run security tests
+        run: pytest backend/tests/test_prompt_injection.py backend/tests/test_input_validation.py backend/tests/test_rbac.py backend/tests/test_ssrf.py -v
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    needs: lint-frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Run tests
+        run: npm test -- --coverage --run
+        working-directory: frontend
+
+  test-e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package.json
+
+      - name: Install backend dependencies
+        run: |
+          pip install pytest pytest-asyncio httpx
+          pip install -r backend/requirements.txt
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+        working-directory: frontend
+
+      - name: Start backend
+        run: uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+        env:
+          JWT_SECRET_KEY: test-secret
+          OLLAMA_BASE_URL: http://localhost:11434
+
+      - name: Start frontend
+        run: npm run build && npx vite preview --port 3000 &
+        working-directory: frontend
+
+      - name: Wait for services
+        run: |
+          for i in {1..30}; do
+            curl -s http://localhost:8000/api/health > /dev/null && break
+            sleep 1
+          done
+
+      - name: Run E2E tests
+        run: pytest backend/tests/e2e/ -v
+        env:
+          BASE_URL: http://localhost:3000
+          API_URL: http://localhost:8000
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: lint-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install bandit safety
+          pip install -r backend/requirements.txt
+
+      - name: Run Bandit security scan
+        run: bandit -r backend/ memory/ agents/ -f json -o bandit-report.json || true
+
+      - name: Check for known vulnerabilities
+        run: safety check -r backend/requirements.txt || true
+
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:${{ github.sha }},${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend:latest
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }},${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-frontend:latest
+
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Railway
+        uses: railwayapp/railway-action@v1
+        with:
+          railway_token: ${{ secrets.RAILWAY_TOKEN }}
+          environment: production

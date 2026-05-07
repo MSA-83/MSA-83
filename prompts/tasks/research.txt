@@ -1,0 +1,12 @@
+Research the following topic and provide a comprehensive analysis.
+
+Topic: {topic}
+
+Include:
+1. Executive summary
+2. Key findings
+3. Supporting evidence
+4. Potential implications
+5. Recommendations
+
+Use available memory context when relevant.

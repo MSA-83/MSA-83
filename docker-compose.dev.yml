@@ -1,0 +1,71 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - titanium-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - EMBEDDER_PROVIDER=ollama
+      - VECTOR_STORE=memory
+      - DATABASE_URL=sqlite:///./titanium.db
+      - REDIS_URL=redis://redis:6379/0
+      - APP_ENV=development
+      - LOG_LEVEL=DEBUG
+    depends_on:
+      - redis
+    networks:
+      - titanium-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - titanium-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - titanium-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=titanium
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - titanium-network
+
+volumes:
+  redis-data:
+
+networks:
+  titanium-network:
+    driver: bridge

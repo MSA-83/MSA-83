@@ -1,0 +1,17 @@
+Perform a security audit on the following code or configuration.
+
+Target:
+{target}
+
+Assess for:
+- Injection vulnerabilities (SQL, Command, XSS, etc.)
+- Authentication/Authorization issues
+- Data exposure risks
+- Configuration weaknesses
+- Dependency vulnerabilities
+
+For each finding provide:
+- Severity (Critical/High/Medium/Low)
+- Description
+- Exploitation scenario
+- Remediation steps with code

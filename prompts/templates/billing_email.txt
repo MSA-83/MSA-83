@@ -1,0 +1,21 @@
+Your Titanium Subscription Receipt
+
+Hi {{name}},
+
+Thank you for your subscription to Titanium.
+
+Subscription Details:
+- Plan: {{tier_name}}
+- Amount: ${{amount}}
+- Billing Cycle: {{billing_cycle}}
+- Next Billing Date: {{next_billing_date}}
+
+Features Included:
+{{features}}
+
+Manage your subscription: {{billing_url}}
+
+Receipt ID: {{receipt_id}}
+
+Best,
+The Titanium Team

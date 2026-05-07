@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+echo "Running pre-commit checks..."
+
+echo "1/4 Checking Python formatting..."
+ruff format --check backend/ memory/ agents/ 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "❌ Python formatting issues found. Run: make format"
+    exit 1
+fi
+
+echo "2/4 Checking Python linting..."
+ruff check backend/ memory/ agents/ 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "❌ Python lint issues found. Run: make lint"
+    exit 1
+fi
+
+echo "3/4 Checking TypeScript..."
+cd frontend && npx tsc --noEmit 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "❌ TypeScript errors found."
+    exit 1
+fi
+
+echo "4/4 Checking ESLint..."
+cd frontend && npx eslint src --ext ts,tsx --quiet 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "❌ ESLint issues found."
+    exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"

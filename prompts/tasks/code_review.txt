@@ -1,0 +1,9 @@
+Analyze the following code for bugs, security vulnerabilities, and performance issues.
+
+Code:
+{code}
+
+Provide:
+1. List of issues found (severity, description, location)
+2. Suggested fixes with code examples
+3. Overall code quality assessment

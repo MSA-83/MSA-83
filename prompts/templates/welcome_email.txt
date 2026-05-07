@@ -1,0 +1,24 @@
+Welcome to Titanium!
+
+Hi {{name}},
+
+Welcome to Titanium - your enterprise AI platform with RAG memory and multi-agent orchestration.
+
+Your account is ready. Here's what you can do:
+
+- Chat with AI using real-time streaming
+- Ingest documents into your RAG memory
+- Create automated agent tasks
+- Search your knowledge base semantically
+
+Getting Started:
+1. Visit the Dashboard: {{dashboard_url}}
+2. Try your first chat: {{chat_url}}
+3. Upload a document to memory: {{memory_url}}
+
+Your current tier: {{tier}}
+
+Need help? Reply to this email or visit our docs.
+
+Best,
+The Titanium Team

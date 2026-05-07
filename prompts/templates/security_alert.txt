@@ -1,0 +1,23 @@
+Security Alert: {{alert_type}}
+
+Hi {{name}},
+
+We detected unusual activity on your Titanium account.
+
+Alert Details:
+- Type: {{alert_type}}
+- Time: {{timestamp}}
+- IP Address: {{ip_address}}
+- Location: {{location}}
+
+If this was you, no action is needed.
+
+If you don't recognize this activity:
+1. Change your password immediately
+2. Review your active sessions
+3. Contact support if needed
+
+Account Settings: {{settings_url}}
+
+Best,
+The Titanium Team
