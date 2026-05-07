@@ -132,11 +132,14 @@ class EmailNotificationService:
             if reply_to:
                 payload["reply_to"] = reply_to
 
-            async with aiohttp.ClientSession() as session, session.post(
-                "https://api.resend.com/emails",
-                headers=headers,
-                json=payload,
-            ) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.post(
+                    "https://api.resend.com/emails",
+                    headers=headers,
+                    json=payload,
+                ) as response,
+            ):
                 response.raise_for_status()
                 result = await response.json()
 

@@ -1,6 +1,5 @@
 """Titanium CrewAI agent implementation."""
 
-
 from agents.orchestrator.config import AGENT_ROLES, AgentConfig
 
 

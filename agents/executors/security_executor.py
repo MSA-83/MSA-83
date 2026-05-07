@@ -103,7 +103,9 @@ class SecurityAuditExecutor(BaseExecutor):
                 "findings_count": len(findings),
                 "categories_found": [f["category"] for f in findings],
                 "injection_detected": injection_result["is_suspicious"],
-                "static_analysis_issues": len([l for l in static_analysis.split("\n") if l.startswith("-")]) if static_analysis else 0,
+                "static_analysis_issues": len([l for l in static_analysis.split("\n") if l.startswith("-")])
+                if static_analysis
+                else 0,
                 "cves_found": cve_ids_found,
                 "token_count": len(output.split()),
             },
@@ -121,7 +123,7 @@ class SecurityAuditExecutor(BaseExecutor):
         patterns = [
             rf"{category}.*?(Critical|High|Medium|Low)",
             rf"(Critical|High|Medium|Low).*?{category}",
-            rf"severity.*?(Critical|High|Medium|Low)",
+            r"severity.*?(Critical|High|Medium|Low)",
         ]
         for pattern in patterns:
             match = re.search(pattern, output, re.IGNORECASE)

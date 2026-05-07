@@ -1,7 +1,8 @@
 """Cache decorator for FastAPI endpoints."""
 
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable
+from typing import Any
 
 from fastapi import Request
 

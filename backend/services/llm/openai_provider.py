@@ -78,11 +78,14 @@ class OpenAIProvider(BaseLLMProvider):
         if not self.api_key:
             return False
         try:
-            async with aiohttp.ClientSession() as session, session.get(
-                f"{self.base_url}/models",
-                headers=self._headers,
-                timeout=aiohttp.ClientTimeout(total=5),
-            ) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(
+                    f"{self.base_url}/models",
+                    headers=self._headers,
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as response,
+            ):
                 return response.status == 200
         except Exception:
             return False
@@ -110,12 +113,15 @@ class OpenAIProvider(BaseLLMProvider):
             "temperature": temperature,
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/chat/completions",
-            headers=self._headers,
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/chat/completions",
+                headers=self._headers,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
             data = await response.json()
 
@@ -153,12 +159,15 @@ class OpenAIProvider(BaseLLMProvider):
             "temperature": temperature,
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/chat/completions",
-            headers=self._headers,
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/chat/completions",
+                headers=self._headers,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
 
             async for line in response.content:
@@ -196,12 +205,15 @@ class OpenAIProvider(BaseLLMProvider):
             "temperature": temperature,
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/chat/completions",
-            headers=self._headers,
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/chat/completions",
+                headers=self._headers,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
             data = await response.json()
 
@@ -234,12 +246,15 @@ class OpenAIProvider(BaseLLMProvider):
             "temperature": temperature,
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/chat/completions",
-            headers=self._headers,
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/chat/completions",
+                headers=self._headers,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
 
             async for line in response.content:
@@ -262,11 +277,14 @@ class OpenAIProvider(BaseLLMProvider):
 
     async def list_models(self) -> list[str]:
         try:
-            async with aiohttp.ClientSession() as session, session.get(
-                f"{self.base_url}/models",
-                headers=self._headers,
-                timeout=aiohttp.ClientTimeout(total=5),
-            ) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(
+                    f"{self.base_url}/models",
+                    headers=self._headers,
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as response,
+            ):
                 if response.status != 200:
                     return []
                 data = await response.json()

@@ -1,6 +1,5 @@
 """Research executor agent."""
 
-
 from agents.executors.base import BaseExecutor, ExecutorStatus, TaskResult
 from agents.tools.agent_tools import URLFetcherTool, WebSearchTool
 from backend.services.ollama_service import ollama_service

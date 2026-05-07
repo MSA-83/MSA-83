@@ -1,6 +1,5 @@
 """Custom tools for Titanium agents."""
 
-import json
 import os
 import re
 import subprocess
@@ -161,7 +160,22 @@ class ShellTool:
     name = "shell_executor"
     description = "Execute a shell command in a sandboxed environment"
 
-    ALLOWED_COMMANDS = ["ls", "cat", "grep", "find", "wc", "head", "tail", "pwd", "df", "du", "tree", "stat", "md5sum", "sha256sum"]
+    ALLOWED_COMMANDS = [
+        "ls",
+        "cat",
+        "grep",
+        "find",
+        "wc",
+        "head",
+        "tail",
+        "pwd",
+        "df",
+        "du",
+        "tree",
+        "stat",
+        "md5sum",
+        "sha256sum",
+    ]
 
     def run(self, command: str, timeout: int | None = None) -> str:
         timeout = timeout or AgentConfig.TOOL_TIMEOUT
@@ -257,7 +271,7 @@ class WebSearchTool:
                 return f"No web search results found for: {query}"
 
             lines = [f"Web search results for '{query}':", ""]
-            for i, r in enumerate(results[:self.max_results], 1):
+            for i, r in enumerate(results[: self.max_results], 1):
                 lines.append(f"[{i}] {r['title']}")
                 lines.append(f"    URL: {r['url']}")
                 if r.get("snippet"):
@@ -283,22 +297,26 @@ class WebSearchTool:
             snippet = re.sub(r"<[^>]+>", "", match.group(3)).strip()
 
             if url and title:
-                results.append({
-                    "title": title,
-                    "url": url,
-                    "snippet": snippet[:200],
-                })
+                results.append(
+                    {
+                        "title": title,
+                        "url": url,
+                        "snippet": snippet[:200],
+                    }
+                )
 
         if not results:
             links = re.findall(r'<a[^>]*href="([^"]*http[^"]*)"[^>]*>(.*?)</a>', html)
-            for url, title in links[:self.max_results]:
+            for url, title in links[: self.max_results]:
                 title = re.sub(r"<[^>]+>", "", title).strip()
                 if title and len(title) > 10:
-                    results.append({
-                        "title": title,
-                        "url": url,
-                        "snippet": "",
-                    })
+                    results.append(
+                        {
+                            "title": title,
+                            "url": url,
+                            "snippet": "",
+                        }
+                    )
 
         return results
 
@@ -324,6 +342,7 @@ class URLFetcherTool:
             if parsed.hostname:
                 try:
                     import ipaddress
+
                     ip = ipaddress.ip_address(parsed.hostname)
                     if ip.is_private or ip.is_loopback or ip.is_link_local:
                         return "Error: Access to private/internal IPs is blocked."
@@ -342,7 +361,7 @@ class URLFetcherTool:
 
             content = response.text
             if len(content) > self.MAX_CONTENT_LENGTH:
-                content = content[:self.MAX_CONTENT_LENGTH] + "\n\n[Content truncated - exceeded length limit]"
+                content = content[: self.MAX_CONTENT_LENGTH] + "\n\n[Content truncated - exceeded length limit]"
 
             text = self._extract_text(content)
 
@@ -365,7 +384,7 @@ class URLFetcherTool:
         text = text.strip()
 
         paragraphs = re.split(r"\n{2,}", text)
-        return "\n\n".join(p.strip() for p in paragraphs if p.strip())[:self.MAX_CONTENT_LENGTH]
+        return "\n\n".join(p.strip() for p in paragraphs if p.strip())[: self.MAX_CONTENT_LENGTH]
 
 
 class CodeExecutorTool:
@@ -375,10 +394,26 @@ class CodeExecutorTool:
     description = "Execute Python code in a sandboxed environment"
 
     BLOCKED_MODULES = {
-        "os", "sys", "subprocess", "multiprocessing", "threading",
-        "socket", "urllib", "http", "requests", "ftplib", "smtplib",
-        "shutil", "pathlib", "importlib", "ctypes", "pickle",
-        "marshal", "inspect", "traceback", "pdb",
+        "os",
+        "sys",
+        "subprocess",
+        "multiprocessing",
+        "threading",
+        "socket",
+        "urllib",
+        "http",
+        "requests",
+        "ftplib",
+        "smtplib",
+        "shutil",
+        "pathlib",
+        "importlib",
+        "ctypes",
+        "pickle",
+        "marshal",
+        "inspect",
+        "traceback",
+        "pdb",
     }
 
     BLOCKED_BUILTINS = {"eval", "exec", "compile", "open", "input", "exit", "quit"}
@@ -519,7 +554,7 @@ class CVESearchTool:
             return "\n".join(lines)
 
         except httpx.RequestError:
-            return f"Error: Could not connect to CVE database."
+            return "Error: Could not connect to CVE database."
         except Exception as e:
             return f"Error searching CVEs: {str(e)}"
 
@@ -572,9 +607,26 @@ def get_agent_tools(agent_type: str) -> list:
     """Get the appropriate tools for an agent type."""
     tool_sets = {
         "researcher": [WebSearchTool(), URLFetcherTool(), RAGSearchTool(), FileReadTool(), FileListTool(), ShellTool()],
-        "coder": [FileReadTool(), FileWriteTool(), FileListTool(), FileSearchTool(), CodeExecutorTool(), CodeAnalysisTool(), ShellTool()],
+        "coder": [
+            FileReadTool(),
+            FileWriteTool(),
+            FileListTool(),
+            FileSearchTool(),
+            CodeExecutorTool(),
+            CodeAnalysisTool(),
+            ShellTool(),
+        ],
         "analyst": [RAGSearchTool(), WebSearchTool(), URLFetcherTool(), CodeExecutorTool(), FileReadTool()],
-        "security": [CVESearchTool(), WebSearchTool(), URLFetcherTool(), RAGSearchTool(), FileReadTool(), FileSearchTool(), CodeAnalysisTool(), ShellTool()],
+        "security": [
+            CVESearchTool(),
+            WebSearchTool(),
+            URLFetcherTool(),
+            RAGSearchTool(),
+            FileReadTool(),
+            FileSearchTool(),
+            CodeAnalysisTool(),
+            ShellTool(),
+        ],
         "writer": [WebSearchTool(), URLFetcherTool(), RAGSearchTool(), FileReadTool(), FileWriteTool()],
     }
 

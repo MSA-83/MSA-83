@@ -54,11 +54,14 @@ class OllamaService:
             },
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/generate",
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
             data = await response.json()
 
@@ -95,11 +98,14 @@ class OllamaService:
             },
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/generate",
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
 
             async for line in response.content:
@@ -125,11 +131,14 @@ class OllamaService:
         """Pull a new model."""
         payload = {"model": model, "stream": False}
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/pull",
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=600),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/pull",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=600),
+            ) as response,
+        ):
             response.raise_for_status()
             return await response.json()
 
@@ -151,11 +160,14 @@ class OllamaService:
             },
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/chat",
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/chat",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
 
             async for line in response.content:
@@ -174,10 +186,13 @@ class OllamaService:
     async def is_available(self) -> bool:
         """Check if Ollama is available."""
         try:
-            async with aiohttp.ClientSession() as session, session.get(
-                f"{self.base_url}/api/tags",
-                timeout=aiohttp.ClientTimeout(total=5),
-            ) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(
+                    f"{self.base_url}/api/tags",
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as response,
+            ):
                 return response.status == 200
         except Exception:
             return False
@@ -200,11 +215,14 @@ class OllamaService:
             },
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/chat",
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/chat",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
             return await response.json()
 

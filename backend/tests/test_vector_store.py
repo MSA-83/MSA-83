@@ -1,6 +1,5 @@
 """Tests for the vector store module."""
 
-
 import pytest
 
 from memory.stores.vector_store import (

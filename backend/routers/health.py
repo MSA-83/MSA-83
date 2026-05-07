@@ -40,10 +40,13 @@ async def check_ollama() -> ComponentHealth:
 
     start = time.time()
     try:
-        async with aiohttp.ClientSession() as session, session.get(
-            "http://localhost:11434/api/tags",
-            timeout=aiohttp.ClientTimeout(total=3),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                "http://localhost:11434/api/tags",
+                timeout=aiohttp.ClientTimeout(total=3),
+            ) as response,
+        ):
             latency = (time.time() - start) * 1000
             if response.status == 200:
                 data = await response.json()
@@ -92,10 +95,13 @@ async def check_qdrant() -> ComponentHealth:
 
     start = time.time()
     try:
-        async with aiohttp.ClientSession() as session, session.get(
-            "http://localhost:6333/",
-            timeout=aiohttp.ClientTimeout(total=3),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(
+                "http://localhost:6333/",
+                timeout=aiohttp.ClientTimeout(total=3),
+            ) as response,
+        ):
             latency = (time.time() - start) * 1000
             return ComponentHealth(
                 status="healthy" if response.status == 200 else "degraded",

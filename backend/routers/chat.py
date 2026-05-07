@@ -1,7 +1,6 @@
 """Chat router for LLM interactions."""
 
 import json
-import os
 import uuid
 
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -90,28 +89,36 @@ async def chat(request: ChatRequest):
                 max_tokens=request.max_tokens,
                 temperature=request.temperature,
             )
-        except Exception as e:
+        except Exception:
             default_model = llm_router._get_default_model()
             response_content = f"AI service is currently unavailable. Your message was: {request.message[:50]}..."
-            response = type('LLMResponse', (), {
-                'content': response_content,
-                'model': request.model or default_model,
-                'tokens_used': 0,
-                'provider': 'fallback',
-            })()
+            response = type(
+                "LLMResponse",
+                (),
+                {
+                    "content": response_content,
+                    "model": request.model or default_model,
+                    "tokens_used": 0,
+                    "provider": "fallback",
+                },
+            )()
 
         conversation_id = request.conversation_id or str(uuid.uuid4())[:8]
         if conversation_id not in _conversation_store:
             _conversation_store[conversation_id] = []
 
-        _conversation_store[conversation_id].append({
-            "role": "user",
-            "content": request.message,
-        })
-        _conversation_store[conversation_id].append({
-            "role": "assistant",
-            "content": response.content,
-        })
+        _conversation_store[conversation_id].append(
+            {
+                "role": "user",
+                "content": request.message,
+            }
+        )
+        _conversation_store[conversation_id].append(
+            {
+                "role": "assistant",
+                "content": response.content,
+            }
+        )
 
         return ChatResponse(
             response=response.content,
@@ -157,12 +164,14 @@ async def chat_stream(request: ChatRequest):
 
         model_name = request.model or llm_router._get_default_model()
 
-        metadata_event = json.dumps({
-            "type": "metadata",
-            "conversation_id": conversation_id,
-            "model": model_name,
-            "rag_sources_count": len(rag_sources),
-        })
+        metadata_event = json.dumps(
+            {
+                "type": "metadata",
+                "conversation_id": conversation_id,
+                "model": model_name,
+                "rag_sources_count": len(rag_sources),
+            }
+        )
         yield f"data: {metadata_event}\n\n"
 
         system_prompt = None
@@ -195,18 +204,22 @@ async def chat_stream(request: ChatRequest):
             _conversation_store[conversation_id].append({"role": "user", "content": request.message})
             _conversation_store[conversation_id].append({"role": "assistant", "content": full_response})
 
-            done_event = json.dumps({
-                "type": "done",
-                "conversation_id": conversation_id,
-                "full_text": full_response,
-            })
+            done_event = json.dumps(
+                {
+                    "type": "done",
+                    "conversation_id": conversation_id,
+                    "full_text": full_response,
+                }
+            )
             yield f"data: {done_event}\n\n"
 
         except Exception as e:
-            error_event = json.dumps({
-                "type": "error",
-                "message": str(e),
-            })
+            error_event = json.dumps(
+                {
+                    "type": "error",
+                    "message": str(e),
+                }
+            )
             yield f"data: {error_event}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
@@ -236,10 +249,12 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
                 continue
 
             if message_type == "typing":
-                await websocket.send_json({
-                    "type": "typing_ack",
-                    "status": data.get("status", "started"),
-                })
+                await websocket.send_json(
+                    {
+                        "type": "typing_ack",
+                        "status": data.get("status", "started"),
+                    }
+                )
                 continue
 
             if message_type != "message":
@@ -252,10 +267,12 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
 
             injection_result = injection_detector.analyze(text)
             if injection_result["is_suspicious"] and injection_result["max_severity"] in ("HIGH", "CRITICAL"):
-                await websocket.send_json({
-                    "type": "error",
-                    "message": "Message blocked: potential prompt injection",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "Message blocked: potential prompt injection",
+                    }
+                )
                 continue
 
             _conversation_store[conversation_id].append({"role": "user", "content": text})
@@ -265,26 +282,32 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
             try:
                 response = await llm_router.chat(
                     model=data.get("model", llm_router._get_default_model()),
-                    messages=[{"role": m["role"], "content": m["content"]} for m in _conversation_store[conversation_id]],
+                    messages=[
+                        {"role": m["role"], "content": m["content"]} for m in _conversation_store[conversation_id]
+                    ],
                     temperature=data.get("temperature", 0.7),
                 )
 
                 assistant_text = response.content
 
-                await websocket.send_json({
-                    "type": "message",
-                    "role": "assistant",
-                    "content": assistant_text,
-                    "conversation_id": conversation_id,
-                })
+                await websocket.send_json(
+                    {
+                        "type": "message",
+                        "role": "assistant",
+                        "content": assistant_text,
+                        "conversation_id": conversation_id,
+                    }
+                )
 
                 _conversation_store[conversation_id].append({"role": "assistant", "content": assistant_text})
 
             except Exception as e:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": f"AI service error: {str(e)}",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": f"AI service error: {str(e)}",
+                    }
+                )
 
     except WebSocketDisconnect:
         pass

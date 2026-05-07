@@ -50,10 +50,13 @@ class OllamaEmbedder(BaseEmbedder):
 
         payload = {"model": self.model, "prompt": text}
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/embeddings",
-            json=payload,
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/embeddings",
+                json=payload,
+            ) as response,
+        ):
             response.raise_for_status()
             data = await response.json()
 
@@ -99,11 +102,14 @@ class GroqEmbedder(BaseEmbedder):
             "encoding_format": "float",
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            "https://api.groq.com/openai/v1/embeddings",
-            headers=headers,
-            json=payload,
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                "https://api.groq.com/openai/v1/embeddings",
+                headers=headers,
+                json=payload,
+            ) as response,
+        ):
             response.raise_for_status()
             data = await response.json()
 
@@ -142,11 +148,14 @@ class HuggingFaceEmbedder(BaseEmbedder):
         headers = {"Authorization": f"Bearer {self.api_key}"}
         payload = {"inputs": text}
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"https://api-inference.huggingface.co/pipeline/feature-extraction/{self.model}",
-            headers=headers,
-            json=payload,
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"https://api-inference.huggingface.co/pipeline/feature-extraction/{self.model}",
+                headers=headers,
+                json=payload,
+            ) as response,
+        ):
             response.raise_for_status()
             vector = await response.json()
 

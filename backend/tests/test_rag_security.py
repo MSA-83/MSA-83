@@ -1,6 +1,5 @@
 """Tests for RAG pipeline with security integration."""
 
-
 from backend.security.prompt_injection import detector
 from memory.chunkers.chunker import FixedSizeChunker, MarkdownChunker, SemanticChunker
 from memory.embeddings.embedder import OllamaEmbedder

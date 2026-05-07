@@ -126,7 +126,9 @@ class CodeExecutor(BaseExecutor):
             metadata={
                 "language": language or "unknown",
                 "task_type": "review",
-                "static_analysis_issues": len([l for l in analysis.split("\n") if l.startswith("-")]) if analysis else 0,
+                "static_analysis_issues": len([l for l in analysis.split("\n") if l.startswith("-")])
+                if analysis
+                else 0,
                 "token_count": len(output.split()),
             },
         )

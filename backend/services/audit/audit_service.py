@@ -79,11 +79,7 @@ class AuditService:
         try:
             cutoff = datetime.now(UTC) - timedelta(days=days)
 
-            total = (
-                db.query(AuditLog)
-                .filter(AuditLog.timestamp >= cutoff)
-                .count()
-            )
+            total = db.query(AuditLog).filter(AuditLog.timestamp >= cutoff).count()
 
             by_action = (
                 db.query(AuditLog.action, db.func.count(AuditLog.id))

@@ -66,10 +66,13 @@ class OllamaProvider(BaseLLMProvider):
 
     async def is_available(self) -> bool:
         try:
-            async with aiohttp.ClientSession() as session, session.get(
-                f"{self.base_url}/api/tags",
-                timeout=aiohttp.ClientTimeout(total=5),
-            ) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(
+                    f"{self.base_url}/api/tags",
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as response,
+            ):
                 return response.status == 200
         except Exception:
             return False
@@ -96,11 +99,14 @@ class OllamaProvider(BaseLLMProvider):
         if system_prompt:
             payload["system"] = system_prompt
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/generate",
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
             data = await response.json()
 
@@ -131,11 +137,14 @@ class OllamaProvider(BaseLLMProvider):
         if system_prompt:
             payload["system"] = system_prompt
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/generate",
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
 
             async for line in response.content:
@@ -166,11 +175,14 @@ class OllamaProvider(BaseLLMProvider):
             },
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/chat",
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/chat",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
             data = await response.json()
 
@@ -206,11 +218,14 @@ class OllamaProvider(BaseLLMProvider):
             },
         }
 
-        async with aiohttp.ClientSession() as session, session.post(
-            f"{self.base_url}/api/chat",
-            json=payload,
-            timeout=aiohttp.ClientTimeout(total=self.timeout),
-        ) as response:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.post(
+                f"{self.base_url}/api/chat",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=self.timeout),
+            ) as response,
+        ):
             response.raise_for_status()
 
             async for line in response.content:
@@ -228,10 +243,13 @@ class OllamaProvider(BaseLLMProvider):
 
     async def list_models(self) -> list[str]:
         try:
-            async with aiohttp.ClientSession() as session, session.get(
-                f"{self.base_url}/api/tags",
-                timeout=aiohttp.ClientTimeout(total=5),
-            ) as response:
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(
+                    f"{self.base_url}/api/tags",
+                    timeout=aiohttp.ClientTimeout(total=5),
+                ) as response,
+            ):
                 if response.status != 200:
                     return []
                 data = await response.json()

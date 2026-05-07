@@ -1,6 +1,5 @@
 """Tests for SSRF protection."""
 
-
 from backend.security.ssrf import SSRFProtector
 
 

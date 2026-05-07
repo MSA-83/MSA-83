@@ -1,6 +1,5 @@
 """Tests for feature flags service."""
 
-
 from backend.services.features.flag_service import DEFAULT_FLAGS, FeatureFlagService, FlagType
 
 

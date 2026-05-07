@@ -1,6 +1,5 @@
 """Tests for system prompt service."""
 
-
 from backend.services.system_prompt import SYSTEM_PROMPTS, system_prompts
 
 

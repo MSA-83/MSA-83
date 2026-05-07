@@ -1,6 +1,5 @@
 """Agents router for multi-agent orchestration."""
 
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 

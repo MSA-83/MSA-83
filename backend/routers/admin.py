@@ -1,14 +1,12 @@
 """Admin router for analytics, user management, and feature flags."""
 
-from datetime import UTC, datetime
-
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.security.admin_rbac import require_admin, require_superuser
 from backend.services.analytics.analytics_service import AnalyticsService
 from backend.services.audit.audit_service import AuditService
-from backend.services.features.flag_service import FeatureFlagService, feature_flags
+from backend.services.features.flag_service import feature_flags
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 

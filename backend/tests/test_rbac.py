@@ -1,6 +1,5 @@
 """Tests for RBAC enforcement."""
 
-
 from backend.security.rbac import (
     ROLE_PERMISSIONS,
     TIER_FEATURES,

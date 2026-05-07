@@ -1,7 +1,5 @@
 """System prompt management service."""
 
-
-
 SYSTEM_PROMPTS = {
     "default": (
         "You are Titanium, an enterprise AI assistant. "

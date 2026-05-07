@@ -78,8 +78,18 @@ async def get_rate_limit_status(current_user: dict = Depends(get_current_user)):
         "limits": stats["limits"],
         "usage": stats["usage"],
         "utilization": {
-            "minute_pct": round((stats["usage"]["requests_this_minute"] / max(stats["limits"]["requests_per_minute"], 1)) * 100, 1) if stats["limits"]["requests_per_minute"] != -1 else 0,
-            "hour_pct": round((stats["usage"]["requests_this_hour"] / max(stats["limits"]["requests_per_hour"], 1)) * 100, 1) if stats["limits"]["requests_per_hour"] != -1 else 0,
-            "day_pct": round((stats["usage"]["requests_today"] / max(stats["limits"]["requests_per_day"], 1)) * 100, 1) if stats["limits"]["requests_per_day"] != -1 else 0,
+            "minute_pct": round(
+                (stats["usage"]["requests_this_minute"] / max(stats["limits"]["requests_per_minute"], 1)) * 100, 1
+            )
+            if stats["limits"]["requests_per_minute"] != -1
+            else 0,
+            "hour_pct": round(
+                (stats["usage"]["requests_this_hour"] / max(stats["limits"]["requests_per_hour"], 1)) * 100, 1
+            )
+            if stats["limits"]["requests_per_hour"] != -1
+            else 0,
+            "day_pct": round((stats["usage"]["requests_today"] / max(stats["limits"]["requests_per_day"], 1)) * 100, 1)
+            if stats["limits"]["requests_per_day"] != -1
+            else 0,
         },
     }

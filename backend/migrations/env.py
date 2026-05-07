@@ -18,12 +18,6 @@ if config.config_file_name is not None:
 from backend.models.database import Base
 
 # Import all models so Alembic can detect them
-from backend.models.user import User, UserUsage
-from backend.models.document import Document
-from backend.models.task import Task
-from backend.models.subscription import Subscription
-from backend.models.analytics_event import AnalyticsEvent
-from backend.models.audit_log import AuditLog
 
 target_metadata = Base.metadata
 

@@ -1,6 +1,5 @@
 """Writing executor agent."""
 
-
 from agents.executors.base import BaseExecutor, ExecutorStatus, TaskResult
 from backend.services.ollama_service import ollama_service
 

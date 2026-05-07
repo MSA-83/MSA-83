@@ -1,6 +1,5 @@
 """Tests for agent executors."""
 
-
 from agents.executors.base import BaseExecutor, ExecutorStatus
 from agents.executors.code_executor import CodeExecutor
 from agents.executors.research_executor import ResearchExecutor

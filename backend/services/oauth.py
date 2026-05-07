@@ -2,7 +2,6 @@
 
 import os
 import secrets
-from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
@@ -38,7 +37,7 @@ class OAuthProvider:
     def __init__(self):
         self.auth_service = AuthService()
 
-    def get_auth_url(self, provider: str, state: Optional[str] = None) -> str:
+    def get_auth_url(self, provider: str, state: str | None = None) -> str:
         """Generate OAuth authorization URL."""
         if provider == "github":
             params = {

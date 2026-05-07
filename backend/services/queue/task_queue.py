@@ -3,7 +3,7 @@
 import os
 from typing import Any
 
-from arq.connections import ArqRedis, create_pool, RedisSettings
+from arq.connections import ArqRedis, RedisSettings, create_pool
 
 
 class QueueConfig:

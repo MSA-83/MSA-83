@@ -10,7 +10,6 @@ from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
-
 SERVICE_NAME = "titanium-platform"
 SERVICE_VERSION = os.getenv("TITANIUM_VERSION", "0.1.0")
 

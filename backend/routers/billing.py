@@ -1,6 +1,5 @@
 """Billing router for subscription management."""
 
-
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 

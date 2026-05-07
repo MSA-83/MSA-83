@@ -3,8 +3,8 @@
 from datetime import UTC, datetime, timedelta
 
 from backend.models.analytics_event import AnalyticsEvent
-from backend.models.user import User
 from backend.models.database import get_db
+from backend.models.user import User
 
 
 class AnalyticsService:
@@ -78,17 +78,10 @@ class AnalyticsService:
 
             total_users = db.query(User).count()
             active_users = (
-                db.query(AnalyticsEvent.user_id)
-                .filter(AnalyticsEvent.occurred_at >= cutoff)
-                .distinct()
-                .count()
+                db.query(AnalyticsEvent.user_id).filter(AnalyticsEvent.occurred_at >= cutoff).distinct().count()
             )
 
-            total_events = (
-                db.query(AnalyticsEvent)
-                .filter(AnalyticsEvent.occurred_at >= cutoff)
-                .count()
-            )
+            total_events = db.query(AnalyticsEvent).filter(AnalyticsEvent.occurred_at >= cutoff).count()
 
             events_by_type = (
                 db.query(AnalyticsEvent.event_type, db.func.count(AnalyticsEvent.id))
@@ -139,11 +132,13 @@ class AnalyticsService:
             results = []
             for user_id, count in top:
                 user = db.query(User).filter(User.id == user_id).first()
-                results.append({
-                    "user_id": user_id,
-                    "email": user.email if user else "unknown",
-                    "event_count": count,
-                })
+                results.append(
+                    {
+                        "user_id": user_id,
+                        "email": user.email if user else "unknown",
+                        "event_count": count,
+                    }
+                )
 
             return results
         finally:

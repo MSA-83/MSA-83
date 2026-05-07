@@ -1,6 +1,5 @@
 """Memory router for RAG document management."""
 
-
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
