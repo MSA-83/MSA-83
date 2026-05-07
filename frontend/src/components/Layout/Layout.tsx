@@ -16,6 +16,7 @@ const navItems = [
   { path: '/billing', label: 'Billing', icon: '💳' },
   { path: '/admin', label: 'Admin', icon: '🔧' },
   { path: '/settings', label: 'Settings', icon: '⚙️' },
+  { path: '/settings/webhooks', label: 'Webhooks', icon: '🔗' },
 ]
 
 export default function Layout({ children }: LayoutProps) {

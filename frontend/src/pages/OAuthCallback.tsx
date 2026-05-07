@@ -12,7 +12,6 @@ export default function OAuthCallbackPage() {
     const accessToken = searchParams.get('access_token')
     const refreshToken = searchParams.get('refresh_token')
     const email = searchParams.get('user_email')
-    const provider = searchParams.get('provider')
     const urlError = searchParams.get('error')
 
     if (urlError) {
@@ -27,7 +26,7 @@ export default function OAuthCallbackPage() {
       return
     }
 
-    loginWithToken(accessToken, refreshToken, { email, provider: provider || 'unknown' })
+    loginWithToken(accessToken, refreshToken, { email })
     navigate('/')
   }, [searchParams, navigate, loginWithToken])
 

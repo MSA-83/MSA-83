@@ -6,7 +6,7 @@ interface NotificationsPanelProps {
   onClose: () => void
 }
 
-export default function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps) {
+export default function NotificationsPanel({ isOpen }: NotificationsPanelProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification, clearAll } = useNotificationsContext()
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
 

@@ -11,6 +11,7 @@ import OAuthCallback from './pages/OAuthCallback'
 import Admin from './pages/Admin'
 import Settings from './pages/Settings'
 import ApiKeysSettings from './pages/ApiKeysSettings'
+import WebhooksSettings from './pages/WebhooksSettings'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
       <Route path="/admin" element={<Layout><Admin /></Layout>} />
       <Route path="/settings" element={<Layout><Settings /></Layout>} />
       <Route path="/settings/api-keys" element={<Layout><ApiKeysSettings /></Layout>} />
+      <Route path="/settings/webhooks" element={<Layout><WebhooksSettings /></Layout>} />
     </Routes>
   )
 }

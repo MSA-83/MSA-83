@@ -194,6 +194,9 @@ export default function SettingsPage() {
               <a href="/settings/api-keys" className="btn-secondary w-full block text-center">
                 Manage API Keys →
               </a>
+              <a href="/settings/webhooks" className="btn-secondary w-full block text-center">
+                Manage Webhooks →
+              </a>
               <button
                 onClick={() => {
                   localStorage.clear()

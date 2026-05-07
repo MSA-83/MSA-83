@@ -64,7 +64,7 @@ export default function MemoryPage() {
             </div>
 
             <FileUpload
-              onUpload={(file) => uploadMutation.mutateAsync(file)}
+              onUpload={async (file) => { uploadMutation.mutateAsync(file) }}
               disabled={uploadMutation.isPending}
               maxSizeMB={10}
             />
