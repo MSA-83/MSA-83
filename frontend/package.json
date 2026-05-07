@@ -30,7 +30,7 @@
     "@typescript-eslint/parser": "^6.15.0",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.16",
-    "eslint": "^8.56.0",
+    "eslint": "^10.3.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^29.1.1",
