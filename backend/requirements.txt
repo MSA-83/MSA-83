@@ -24,4 +24,4 @@ opentelemetry-instrumentation-fastapi>=0.46b0
 opentelemetry-instrumentation-sqlalchemy>=0.46b0
 opentelemetry-exporter-otlp>=1.25.0
 weasyprint>=62.0
-arq>=0.26.0
+arq>=0.28.0
