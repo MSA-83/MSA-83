@@ -1,8 +1,19 @@
 """Custom tools for Titanium agents."""
 
+import ast
+import base64
+import csv
+import difflib
+import hashlib
+import io
+import json
+import math
 import os
 import re
 import subprocess
+import textwrap
+import xml.etree.ElementTree as ET
+from datetime import datetime
 from urllib.parse import urlparse
 
 import httpx
@@ -603,31 +614,702 @@ class CodeAnalysisTool:
             return f"Analysis failed: {str(e)}"
 
 
+class CalculatorTool:
+    """Tool for evaluating mathematical expressions safely."""
+
+    name = "calculator"
+    description = "Evaluate mathematical expressions including trig, log, sqrt, and constants"
+
+    ALLOWED_NAMES = {
+        "abs": abs,
+        "round": round,
+        "min": min,
+        "max": max,
+        "sum": sum,
+        "pow": pow,
+        "sqrt": math.sqrt,
+        "sin": math.sin,
+        "cos": math.cos,
+        "tan": math.tan,
+        "log": math.log,
+        "log10": math.log10,
+        "log2": math.log2,
+        "ceil": math.ceil,
+        "floor": math.floor,
+        "factorial": math.factorial,
+        "exp": math.exp,
+        "pi": math.pi,
+        "e": math.e,
+        "tau": math.tau,
+        "inf": math.inf,
+    }
+
+    BLOCKED_PATTERNS = [
+        r"\bimport\b",
+        r"\bopen\b",
+        r"\bexec\b",
+        r"\beval\b",
+        r"\b__\w+__\b",
+        r"\bsystem\b",
+        r"\bsubprocess\b",
+        r"\bos\.",
+    ]
+
+    def run(self, expression: str) -> str:
+        for pattern in self.BLOCKED_PATTERNS:
+            if re.search(pattern, expression):
+                return f"Error: Expression contains blocked pattern."
+
+        if re.search(r"[^0-9+\-*/().%\s\w,]", expression):
+            pass
+
+        try:
+            result = eval(expression, {"__builtins__": {}}, self.ALLOWED_NAMES)
+            if isinstance(result, float) and result != result:
+                return "Result: NaN"
+            if result == math.inf or result == -math.inf:
+                return "Result: Infinity"
+            return f"Result: {result}"
+        except Exception as e:
+            return f"Error evaluating expression: {str(e)}"
+
+
+class RegexTesterTool:
+    """Tool for testing regular expressions against text."""
+
+    name = "regex_tester"
+    description = "Test a regex pattern against text and see all matches, groups, and positions"
+
+    def run(self, pattern: str, text: str, flags: str = "") -> str:
+        try:
+            flag_value = 0
+            for f in flags.split(","):
+                f = f.strip().lower()
+                if f == "ignorecase":
+                    flag_value |= re.IGNORECASE
+                elif f == "multiline":
+                    flag_value |= re.MULTILINE
+                elif f == "dotall":
+                    flag_value |= re.DOTALL
+
+            compiled = re.compile(pattern, flag_value)
+
+            matches = list(compiled.finditer(text))
+            if not matches:
+                return f"No matches found for pattern: {pattern}"
+
+            lines = [f"Found {len(matches)} match(es) for pattern '{pattern}':", ""]
+            for i, m in enumerate(matches, 1):
+                lines.append(f"Match {i}: '{m.group()}' at position {m.start()}-{m.end()}")
+                if m.groups():
+                    for gi, g in enumerate(m.groups(), 1):
+                        lines.append(f"  Group {gi}: '{g}'")
+                if m.groupdict():
+                    for k, v in m.groupdict().items():
+                        lines.append(f"  {k}: '{v}'")
+                lines.append("")
+
+            subs = compiled.sub("MATCH", text, count=0)
+            lines.append(f"Substitution preview (matches → MATCH):")
+            preview = subs[:300]
+            if len(subs) > 300:
+                preview += "..."
+            lines.append(preview)
+
+            return "\n".join(lines)
+        except re.error as e:
+            return f"Invalid regex pattern: {str(e)}"
+        except Exception as e:
+            return f"Regex test failed: {str(e)}"
+
+
+class JSONFormatterTool:
+    """Tool for validating, formatting, and transforming JSON."""
+
+    name = "json_formatter"
+    description = "Validate, prettify, minify, or extract paths from JSON data"
+
+    def run(self, json_str: str, action: str = "prettify", path: str = "") -> str:
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            return f"Invalid JSON: {str(e)}"
+
+        try:
+            if action == "prettify":
+                return json.dumps(data, indent=2, ensure_ascii=False)
+            elif action == "minify":
+                return json.dumps(data, separators=(",", ":"), ensure_ascii=False)
+            elif action == "keys":
+                keys = self._extract_keys(data)
+                return f"Keys found:\n" + "\n".join(f"  - {k}" for k in keys)
+            elif action == "extract" and path:
+                value = self._extract_path(data, path)
+                return json.dumps(value, indent=2, ensure_ascii=False)
+            elif action == "stats":
+                return self._json_stats(data)
+            else:
+                return json.dumps(data, indent=2, ensure_ascii=False)
+        except Exception as e:
+            return f"JSON operation failed: {str(e)}"
+
+    def _extract_keys(self, data, prefix="") -> list[str]:
+        keys = []
+        if isinstance(data, dict):
+            for k, v in data.items():
+                full_key = f"{prefix}.{k}" if prefix else k
+                keys.append(full_key)
+                keys.extend(self._extract_keys(v, full_key))
+        elif isinstance(data, list) and data:
+            keys.extend(self._extract_keys(data[0], f"{prefix}[0]"))
+        return keys
+
+    def _extract_path(self, data, path: str):
+        parts = re.split(r"\.|\[|\]", path)
+        parts = [p for p in parts if p]
+        current = data
+        for part in parts:
+            if isinstance(current, dict):
+                current = current[part]
+            elif isinstance(current, list):
+                current = current[int(part)]
+            else:
+                raise KeyError(f"Cannot navigate into {type(current).__name__}")
+        return current
+
+    def _json_stats(self, data) -> str:
+        def count(obj):
+            if isinstance(obj, dict):
+                return sum(count(v) for v in obj.values()) + len(obj)
+            elif isinstance(obj, list):
+                return sum(count(i) for i in obj) + 1
+            return 1
+
+        total = count(data)
+        return f"Total elements: {total}\nType: {type(data).__name__}\nSize: {len(json.dumps(data))} bytes"
+
+
+class DiffGeneratorTool:
+    """Tool for generating diffs between two text/code blocks."""
+
+    name = "diff_generator"
+    description = "Generate a unified diff between two text or code blocks"
+
+    def run(self, original: str, modified: str, from_file: str = "a", to_file: str = "b") -> str:
+        try:
+            orig_lines = original.splitlines(keepends=True)
+            mod_lines = modified.splitlines(keepends=True)
+
+            diff = difflib.unified_diff(
+                orig_lines,
+                mod_lines,
+                fromfile=from_file,
+                tofile=to_file,
+            )
+
+            result = "".join(diff)
+            if not result:
+                return "No differences found."
+            return result
+        except Exception as e:
+            return f"Diff generation failed: {str(e)}"
+
+
+class ImageMetadataTool:
+    """Tool for extracting metadata from image files."""
+
+    name = "image_metadata"
+    description = "Extract metadata (dimensions, format, size, EXIF) from an image file"
+
+    def run(self, file_path: str) -> str:
+        if not os.path.exists(file_path):
+            return f"Error: File not found: {file_path}"
+
+        try:
+            size = os.path.getsize(file_path)
+            size_str = self._format_size(size)
+
+            ext = os.path.splitext(file_path)[1].lower()
+            format_map = {
+                ".jpg": "JPEG", ".jpeg": "JPEG", ".png": "PNG",
+                ".gif": "GIF", ".bmp": "BMP", ".webp": "WEBP",
+                ".tiff": "TIFF", ".tif": "TIFF", ".svg": "SVG",
+                ".ico": "ICO", ".avif": "AVIF",
+            }
+            fmt = format_map.get(ext, ext.upper().lstrip("."))
+
+            lines = [
+                f"File: {os.path.basename(file_path)}",
+                f"Format: {fmt}",
+                f"Size: {size_str}",
+            ]
+
+            try:
+                with open(file_path, "rb") as f:
+                    header = f.read(32)
+
+                if header[:2] == b"\xff\xd8":
+                    lines.append("Signature: JPEG")
+                    width, height = self._parse_jpeg_size(file_path)
+                    if width and height:
+                        lines.append(f"Dimensions: {width}x{height}")
+                elif header[:8] == b"\x89PNG\r\n\x1a\n":
+                    lines.append("Signature: PNG")
+                    w = int.from_bytes(header[16:20], "big")
+                    h = int.from_bytes(header[20:24], "big")
+                    lines.append(f"Dimensions: {w}x{h}")
+                elif header[:6] == b"GIF87a" or header[:6] == b"GIF89a":
+                    lines.append("Signature: GIF")
+                    w = int.from_bytes(header[6:8], "little")
+                    h = int.from_bytes(header[8:10], "little")
+                    lines.append(f"Dimensions: {w}x{h}")
+                elif header[:4] == b"RIFF" and header[8:12] == b"WEBP":
+                    lines.append("Signature: WEBP")
+            except Exception:
+                pass
+
+            sha256 = hashlib.sha256()
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(8192), b""):
+                    sha256.update(chunk)
+            lines.append(f"SHA-256: {sha256.hexdigest()[:16]}...")
+
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Failed to read image metadata: {str(e)}"
+
+    def _format_size(self, size: int) -> str:
+        for unit in ["B", "KB", "MB", "GB"]:
+            if size < 1024:
+                return f"{size:.1f} {unit}"
+            size /= 1024
+        return f"{size:.1f} TB"
+
+    def _parse_jpeg_size(self, path: str) -> tuple:
+        try:
+            with open(path, "rb") as f:
+                data = f.read()
+            pos = 2
+            while pos < len(data):
+                if data[pos] != 0xFF:
+                    pos += 1
+                    continue
+                marker = data[pos + 1]
+                if marker == 0xC0 or marker == 0xC2:
+                    h = int.from_bytes(data[pos + 5 : pos + 7], "big")
+                    w = int.from_bytes(data[pos + 7 : pos + 9], "big")
+                    return (w, h)
+                segment_len = int.from_bytes(data[pos + 2 : pos + 4], "big")
+                pos += 2 + segment_len
+        except Exception:
+            pass
+        return (None, None)
+
+
+class CSVTool:
+    """Tool for parsing and transforming CSV data."""
+
+    name = "csv_tool"
+    description = "Parse, validate, count, or convert CSV data to JSON and vice versa"
+
+    def run(self, data: str, action: str = "parse", delimiter: str = ",") -> str:
+        try:
+            if action == "parse":
+                reader = csv.DictReader(io.StringIO(data), delimiter=delimiter)
+                rows = list(reader)
+                if not rows:
+                    return "No data rows found."
+                lines = [f"CSV parsed: {len(rows)} rows, {len(rows[0].keys())} columns"]
+                lines.append(f"Columns: {', '.join(rows[0].keys())}")
+                lines.append("")
+                for i, row in enumerate(rows[:5], 1):
+                    lines.append(f"Row {i}:")
+                    for k, v in row.items():
+                        lines.append(f"  {k}: {v}")
+                if len(rows) > 5:
+                    lines.append(f"... and {len(rows) - 5} more rows")
+                return "\n".join(lines)
+
+            elif action == "to_json":
+                reader = csv.DictReader(io.StringIO(data), delimiter=delimiter)
+                rows = list(reader)
+                return json.dumps(rows, indent=2, ensure_ascii=False)
+
+            elif action == "from_json":
+                json_data = json.loads(data)
+                if not isinstance(json_data, list) or not json_data:
+                    return "Error: JSON must be a non-empty array of objects."
+                output = io.StringIO()
+                writer = csv.DictWriter(output, fieldnames=json_data[0].keys())
+                writer.writeheader()
+                writer.writerows(json_data)
+                return output.getvalue()
+
+            elif action == "validate":
+                reader = csv.reader(io.StringIO(data), delimiter=delimiter)
+                rows = list(reader)
+                if not rows:
+                    return "Error: Empty CSV."
+                header_len = len(rows[0])
+                invalid = []
+                for i, row in enumerate(rows[1:], 2):
+                    if len(row) != header_len:
+                        invalid.append(i)
+                if invalid:
+                    return f"CSV validation: {len(invalid)} row(s) have wrong column count: rows {invalid}"
+                return f"CSV valid: {len(rows) - 1} rows, {header_len} columns"
+
+            else:
+                return f"Unknown action: {action}. Supported: parse, to_json, from_json, validate"
+        except json.JSONDecodeError as e:
+            return f"JSON parse error: {str(e)}"
+        except Exception as e:
+            return f"CSV operation failed: {str(e)}"
+
+
+class XMLTool:
+    """Tool for parsing and querying XML data."""
+
+    name = "xml_tool"
+    description = "Parse, validate, and extract data from XML documents"
+
+    def run(self, xml_str: str, action: str = "parse", xpath: str = "") -> str:
+        try:
+            root = ET.fromstring(xml_str)
+
+            if action == "parse":
+                return self._tree_summary(root)
+            elif action == "find" and xpath:
+                elements = root.findall(xpath)
+                if not elements:
+                    return f"No elements found for path: {xpath}"
+                lines = [f"Found {len(elements)} element(s) for '{xpath}':", ""]
+                for elem in elements[:20]:
+                    text = (elem.text or "").strip()
+                    attrs = dict(elem.attrib)
+                    line = f"<{elem.tag}"
+                    if attrs:
+                        line += " " + " ".join(f'{k}="{v}"' for k, v in attrs.items())
+                    line += f">{text}" if text else f"/>"
+                    lines.append(line)
+                if len(elements) > 20:
+                    lines.append(f"... and {len(elements) - 20} more")
+                return "\n".join(lines)
+            elif action == "validate":
+                return f"Valid XML. Root element: <{root.tag}>"
+            elif action == "stats":
+                count = sum(1 for _ in root.iter())
+                tags = set(elem.tag for elem in root.iter())
+                return f"Total elements: {count}\nUnique tags: {len(tags)}\nTags: {', '.join(sorted(tags))}"
+            else:
+                return self._tree_summary(root)
+        except ET.ParseError as e:
+            return f"XML parse error: {str(e)}"
+        except Exception as e:
+            return f"XML operation failed: {str(e)}"
+
+    def _tree_summary(self, root: ET.Element, indent: int = 0) -> str:
+        lines = []
+        prefix = "  " * indent
+        text = (root.text or "").strip()[:80]
+        attr_str = ""
+        if root.attrib:
+            attr_str = " " + " ".join(f'{k}="{v}"' for k, v in root.attrib.items())
+        line = f"{prefix}<{root.tag}{attr_str}>"
+        if text:
+            line += f" {text}"
+        lines.append(line)
+        children = list(root)
+        if children:
+            for child in children[:10]:
+                lines.extend(self._tree_summary(child, indent + 1).split("\n"))
+            if len(children) > 10:
+                lines.append(f"{prefix}  ... and {len(children) - 10} more children")
+        return "\n".join(lines)
+
+
+class APITesterTool:
+    """Tool for making HTTP requests to test APIs."""
+
+    name = "api_tester"
+    description = "Make HTTP requests (GET/POST/PUT/DELETE/PATCH) with headers and body to test APIs"
+
+    BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "169.254.169.254", "metadata.google.internal"}
+
+    def run(self, url: str, method: str = "GET", headers: str = "", body: str = "") -> str:
+        try:
+            parsed = urlparse(url)
+            if parsed.scheme not in ("http", "https"):
+                return f"Error: Only http/https URLs allowed."
+            if parsed.hostname in self.BLOCKED_HOSTS:
+                return f"Error: Access to {parsed.hostname} is blocked."
+            try:
+                import ipaddress
+                ip = ipaddress.ip_address(parsed.hostname)
+                if ip.is_private or ip.is_loopback:
+                    return "Error: Private IPs blocked."
+            except ValueError:
+                pass
+
+            req_headers = {}
+            if headers:
+                for line in headers.split("\n"):
+                    if ":" in line:
+                        k, v = line.split(":", 1)
+                        req_headers[k.strip()] = v.strip()
+
+            method = method.upper()
+            if method not in ("GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"):
+                return f"Error: Unsupported method: {method}"
+
+            start = datetime.utcnow()
+            response = httpx.request(
+                method, url,
+                headers=req_headers,
+                content=body if body else None,
+                follow_redirects=True,
+                timeout=15,
+            )
+            elapsed = (datetime.utcnow() - start).total_seconds() * 1000
+
+            lines = [
+                f"HTTP {response.status_code} {response.reason_phrase}",
+                f"Time: {elapsed:.0f}ms",
+                f"Content-Type: {response.headers.get('content-type', 'unknown')}",
+                f"Size: {len(response.content):,} bytes",
+                "",
+                "Response:",
+            ]
+
+            if response.text:
+                preview = response.text[:5000]
+                try:
+                    formatted = json.dumps(json.loads(preview), indent=2)
+                    lines.append(formatted)
+                except (json.JSONDecodeError, ValueError):
+                    lines.append(preview)
+
+            return "\n".join(lines)
+        except httpx.TimeoutException:
+            return "Error: Request timed out."
+        except Exception as e:
+            return f"Request failed: {str(e)}"
+
+
+class HashTool:
+    """Tool for computing cryptographic hashes of strings or files."""
+
+    name = "hash_tool"
+    description = "Compute MD5, SHA-1, SHA-256, or SHA-512 hashes of text or file contents"
+
+    def run(self, input_str: str, algorithm: str = "sha256", is_file: bool = False) -> str:
+        algos = {
+            "md5": hashlib.md5,
+            "sha1": hashlib.sha1,
+            "sha256": hashlib.sha256,
+            "sha512": hashlib.sha512,
+        }
+
+        if algorithm.lower() not in algos:
+            return f"Error: Unsupported algorithm. Supported: {', '.join(algos.keys())}"
+
+        try:
+            h = algos[algorithm.lower()]()
+            if is_file:
+                if not os.path.exists(input_str):
+                    return f"Error: File not found: {input_str}"
+                with open(input_str, "rb") as f:
+                    for chunk in iter(lambda: f.read(8192), b""):
+                        h.update(chunk)
+                return f"{algorithm.upper()}({os.path.basename(input_str)}): {h.hexdigest()}"
+            else:
+                h.update(input_str.encode("utf-8"))
+                return f"{algorithm.upper()}: {h.hexdigest()}"
+        except Exception as e:
+            return f"Hash computation failed: {str(e)}"
+
+
+class Base64Tool:
+    """Tool for encoding and decoding Base64 data."""
+
+    name = "base64_tool"
+    description = "Encode text to Base64 or decode Base64 strings"
+
+    def run(self, data: str, action: str = "encode") -> str:
+        try:
+            if action == "encode":
+                encoded = base64.b64encode(data.encode("utf-8")).decode("utf-8")
+                return f"Base64 encoded:\n{encoded}"
+            elif action == "decode":
+                decoded = base64.b64decode(data).decode("utf-8")
+                return f"Base64 decoded:\n{decoded}"
+            else:
+                return f"Unknown action: {action}. Supported: encode, decode"
+        except Exception as e:
+            return f"Base64 operation failed: {str(e)}"
+
+
+class DateTool:
+    """Tool for date/time calculations and formatting."""
+
+    name = "date_tool"
+    description = "Get current time, parse dates, calculate differences, and format timestamps"
+
+    def run(self, action: str = "now", date1: str = "", date2: str = "", format_str: str = "%Y-%m-%d %H:%M:%S") -> str:
+        try:
+            if action == "now":
+                now = datetime.utcnow()
+                return f"Current UTC: {now.strftime(format_str)}\nISO 8601: {now.isoformat()}\nTimestamp: {now.timestamp():.0f}"
+            elif action == "parse" and date1:
+                for fmt in ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%dT%H:%M:%S"]:
+                    try:
+                        dt = datetime.strptime(date1, fmt)
+                        return f"Parsed: {dt}\nDay: {dt.strftime('%A')}\nWeek: {dt.isocalendar()[1]}\nDay of year: {dt.timetuple().tm_yday}"
+                    except ValueError:
+                        continue
+                return f"Could not parse date: {date1}"
+            elif action == "diff" and date1 and date2:
+                d1 = self._parse_date(date1)
+                d2 = self._parse_date(date2)
+                if d1 and d2:
+                    delta = abs(d2 - d1)
+                    return f"Difference: {delta.days} days, {delta.seconds // 3600} hours, {(delta.seconds % 3600) // 60} minutes"
+                return "Could not parse one or both dates."
+            elif action == "format" and date1:
+                dt = self._parse_date(date1)
+                if dt:
+                    return f"Formatted ({format_str}): {dt.strftime(format_str)}"
+                return f"Could not parse date: {date1}"
+            else:
+                return f"Usage: action=now|parse|diff|format"
+        except Exception as e:
+            return f"Date operation failed: {str(e)}"
+
+    def _parse_date(self, s: str) -> datetime | None:
+        for fmt in ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%m/%d/%Y", "%d/%m/%Y", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"]:
+            try:
+                return datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+        return None
+
+
+class MarkdownTool:
+    """Tool for converting between Markdown and HTML."""
+
+    name = "markdown_tool"
+    description = "Convert Markdown to HTML or extract headings/links from Markdown text"
+
+    def run(self, markdown_str: str, action: str = "to_html") -> str:
+        try:
+            if action == "to_html":
+                html = self._md_to_html(markdown_str)
+                return html
+            elif action == "headings":
+                headings = re.findall(r'^(#{1,6})\s+(.+)$', markdown_str, re.MULTILINE)
+                if not headings:
+                    return "No headings found."
+                lines = ["Headings:"]
+                for hashes, text in headings:
+                    level = len(hashes)
+                    lines.append(f"  {'  ' * (level - 1)}H{level}: {text}")
+                return "\n".join(lines)
+            elif action == "links":
+                links = re.findall(r'\[([^\]]+)\]\(([^)]+)\)', markdown_str)
+                if not links:
+                    return "No links found."
+                lines = ["Links:"]
+                for text, url in links:
+                    lines.append(f"  {text} -> {url}")
+                return "\n".join(lines)
+            elif action == "stats":
+                words = len(markdown_str.split())
+                lines_count = len(markdown_str.splitlines())
+                headings = len(re.findall(r'^#{1,6}\s+', markdown_str, re.MULTILINE))
+                links = len(re.findall(r'\[.+?\]\(.+?\)', markdown_str))
+                code_blocks = len(re.findall(r'```', markdown_str)) // 2
+                return f"Words: {words}\nLines: {lines_count}\nHeadings: {headings}\nLinks: {links}\nCode blocks: {code_blocks}\nChars: {len(markdown_str)}"
+            else:
+                return f"Unknown action: {action}. Supported: to_html, headings, links, stats"
+        except Exception as e:
+            return f"Markdown operation failed: {str(e)}"
+
+    def _md_to_html(self, md: str) -> str:
+        lines = md.split("\n")
+        html = []
+        in_code = False
+        in_ul = False
+        for line in lines:
+            if line.startswith("```"):
+                if in_code:
+                    html.append("</code></pre>")
+                    in_code = False
+                else:
+                    if in_ul:
+                        html.append("</ul>")
+                        in_ul = False
+                    html.append("<pre><code>")
+                    in_code = True
+                continue
+            if in_code:
+                html.append(line)
+                continue
+            if in_ul and not line.startswith("- "):
+                html.append("</ul>")
+                in_ul = False
+            m = re.match(r'^(#{1,6})\s+(.+)$', line)
+            if m:
+                level = len(m.group(1))
+                html.append(f"<h{level}>{m.group(2)}</h{level}>")
+            elif line.startswith("- "):
+                if not in_ul:
+                    html.append("<ul>")
+                    in_ul = True
+                html.append(f"  <li>{line[2:]}</li>")
+            elif line.startswith("> "):
+                html.append(f"<blockquote>{line[2:]}</blockquote>")
+            elif line.strip() == "":
+                pass
+            else:
+                text = line
+                text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+                text = re.sub(r'\*(.+?)\*', r'<em>\1</em>', text)
+                text = re.sub(r'`(.+?)`', r'<code>\1</code>', text)
+                text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', text)
+                html.append(f"<p>{text}</p>")
+        if in_ul:
+            html.append("</ul>")
+        return "\n".join(html)
+
+
 def get_agent_tools(agent_type: str) -> list:
     """Get the appropriate tools for an agent type."""
     tool_sets = {
-        "researcher": [WebSearchTool(), URLFetcherTool(), RAGSearchTool(), FileReadTool(), FileListTool(), ShellTool()],
+        "researcher": [
+            WebSearchTool(), URLFetcherTool(), RAGSearchTool(), FileReadTool(), FileListTool(),
+            ShellTool(), MarkdownTool(), DateTool(), APITesterTool(),
+        ],
         "coder": [
-            FileReadTool(),
-            FileWriteTool(),
-            FileListTool(),
-            FileSearchTool(),
-            CodeExecutorTool(),
-            CodeAnalysisTool(),
-            ShellTool(),
+            FileReadTool(), FileWriteTool(), FileListTool(), FileSearchTool(), FileDeleteTool(),
+            CodeExecutorTool(), CodeAnalysisTool(), ShellTool(), DiffGeneratorTool(),
+            RegexTesterTool(), HashTool(), Base64Tool(),
         ],
-        "analyst": [RAGSearchTool(), WebSearchTool(), URLFetcherTool(), CodeExecutorTool(), FileReadTool()],
+        "analyst": [
+            RAGSearchTool(), WebSearchTool(), URLFetcherTool(), CodeExecutorTool(), FileReadTool(),
+            JSONFormatterTool(), CSVTool(), XMLTool(), CalculatorTool(), MarkdownTool(),
+        ],
         "security": [
-            CVESearchTool(),
-            WebSearchTool(),
-            URLFetcherTool(),
-            RAGSearchTool(),
-            FileReadTool(),
-            FileSearchTool(),
-            CodeAnalysisTool(),
-            ShellTool(),
+            CVESearchTool(), WebSearchTool(), URLFetcherTool(), RAGSearchTool(), FileReadTool(),
+            FileSearchTool(), CodeAnalysisTool(), ShellTool(), HashTool(), APITesterTool(),
         ],
-        "writer": [WebSearchTool(), URLFetcherTool(), RAGSearchTool(), FileReadTool(), FileWriteTool()],
+        "writer": [
+            WebSearchTool(), URLFetcherTool(), RAGSearchTool(), FileReadTool(), FileWriteTool(),
+            MarkdownTool(), JSONFormatterTool(), Base64Tool(), DateTool(),
+        ],
+        "general": [
+            CalculatorTool(), DateTool(), HashTool(), Base64Tool(), JSONFormatterTool(),
+            MarkdownTool(), WebSearchTool(), RAGSearchTool(),
+        ],
     }
 
     return tool_sets.get(agent_type, [RAGSearchTool()])
