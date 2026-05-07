@@ -163,8 +163,11 @@ status:
 	@echo ""
 
 e2e:
-	@cd frontend && npx playwright install --with-deps
-	@TITANIUM_TESTING=true .venv/bin/pytest backend/tests/e2e/ -v
+	@cd frontend && npx playwright install --with-deps 2>/dev/null || npx playwright install
+	@cd frontend && npm run test:e2e
+
+e2e-ui:
+	@cd frontend && npm run test:e2e:ui
 
 security-scan:
 	@.venv/bin/pip install bandit safety -q
