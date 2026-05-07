@@ -1,5 +1,7 @@
-import { ReactNode } from 'react'
+import { useState, ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
+import NotificationsPanel from '../NotificationsPanel'
+import { useNotificationsContext } from '../../contexts/NotificationsContext'
 
 interface LayoutProps {
   children: ReactNode
@@ -17,6 +19,9 @@ const navItems = [
 ]
 
 export default function Layout({ children }: LayoutProps) {
+  const [showNotifications, setShowNotifications] = useState(false)
+  const { unreadCount } = useNotificationsContext()
+
   return (
     <div className="flex h-screen bg-titanium-950">
       <aside className="w-64 bg-titanium-900 border-r border-titanium-800 flex flex-col">
@@ -62,11 +67,37 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <div className="p-6 max-w-7xl mx-auto">
-          {children}
-        </div>
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="flex items-center justify-end p-4 border-b border-titanium-800 bg-titanium-900/50">
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2 text-titanium-400 hover:text-titanium-200 transition-colors rounded-lg hover:bg-titanium-800"
+              aria-label="Notifications"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+
+            <NotificationsPanel
+              isOpen={showNotifications}
+              onClose={() => setShowNotifications(false)}
+            />
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-auto">
+          <div className="p-6 max-w-7xl mx-auto">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   )
 }

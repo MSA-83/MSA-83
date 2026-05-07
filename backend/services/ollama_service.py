@@ -133,6 +133,44 @@ class OllamaService:
             response.raise_for_status()
             return await response.json()
 
+    async def chat_stream(
+        self,
+        model: str,
+        messages: list[dict],
+        temperature: float = 0.7,
+        max_tokens: int = 2048,
+    ) -> AsyncGenerator[str, None]:
+        """Stream a chat-style completion from Ollama."""
+        payload = {
+            "model": model,
+            "messages": messages,
+            "stream": True,
+            "options": {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            },
+        }
+
+        async with aiohttp.ClientSession() as session, session.post(
+            f"{self.base_url}/api/chat",
+            json=payload,
+            timeout=aiohttp.ClientTimeout(total=self.timeout),
+        ) as response:
+            response.raise_for_status()
+
+            async for line in response.content:
+                if line:
+                    try:
+                        data = json.loads(line.decode())
+                        if "message" in data:
+                            content = data["message"].get("content", "")
+                            if content:
+                                yield json.dumps({"chunk": content})
+                        if data.get("done", False):
+                            yield json.dumps({"done": True, "total_duration": data.get("total_duration", 0)})
+                    except json.JSONDecodeError:
+                        continue
+
     async def is_available(self) -> bool:
         """Check if Ollama is available."""
         try:
