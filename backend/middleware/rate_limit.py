@@ -39,7 +39,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             except Exception:
                 pass
 
-        limit_check = rate_limit_service.check_rate_limit(user_id, tier, "minute")
+        limit_check = rate_limit_service.check_rate_limit(user_id, tier, "minute", path)
 
         if not limit_check["allowed"]:
             return JSONResponse(

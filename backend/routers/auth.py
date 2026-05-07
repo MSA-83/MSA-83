@@ -11,6 +11,7 @@ from backend.services.auth.auth_service import (
     auth_service,
     get_current_user,
 )
+from backend.services.limiter import rate_limit_service
 
 router = APIRouter()
 
@@ -62,3 +63,23 @@ async def get_current_user_info(current_user: dict = Depends(get_current_user)):
 async def logout(current_user: dict = Depends(get_current_user)):
     """Logout (client should discard tokens)."""
     return {"message": "Logged out successfully. Discard your tokens."}
+
+
+@router.get("/rate-limit")
+async def get_rate_limit_status(current_user: dict = Depends(get_current_user)):
+    """Get current rate limit status for the authenticated user."""
+    user_id = current_user["user_id"]
+    tier = current_user.get("tier", "free")
+
+    stats = rate_limit_service.get_usage_stats(user_id, tier)
+
+    return {
+        "tier": tier,
+        "limits": stats["limits"],
+        "usage": stats["usage"],
+        "utilization": {
+            "minute_pct": round((stats["usage"]["requests_this_minute"] / max(stats["limits"]["requests_per_minute"], 1)) * 100, 1) if stats["limits"]["requests_per_minute"] != -1 else 0,
+            "hour_pct": round((stats["usage"]["requests_this_hour"] / max(stats["limits"]["requests_per_hour"], 1)) * 100, 1) if stats["limits"]["requests_per_hour"] != -1 else 0,
+            "day_pct": round((stats["usage"]["requests_today"] / max(stats["limits"]["requests_per_day"], 1)) * 100, 1) if stats["limits"]["requests_per_day"] != -1 else 0,
+        },
+    }
