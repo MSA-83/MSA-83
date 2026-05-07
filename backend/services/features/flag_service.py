@@ -1,7 +1,7 @@
 """Feature flag system for Titanium platform."""
 
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -87,8 +87,8 @@ class FeatureFlagService:
         for name, config in DEFAULT_FLAGS.items():
             self._flags[name] = {
                 **config,
-                "created_at": datetime.utcnow().isoformat(),
-                "updated_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             }
 
     def _load_env_overrides(self):
@@ -104,7 +104,7 @@ class FeatureFlagService:
                         self._flags[flag_name]["value"] = float(value)
                     else:
                         self._flags[flag_name]["value"] = value
-                    self._flags[flag_name]["updated_at"] = datetime.utcnow().isoformat()
+                    self._flags[flag_name]["updated_at"] = datetime.now(UTC).isoformat()
 
     def is_enabled(self, flag_name: str, user_id: str | None = None) -> bool:
         """Check if a feature flag is enabled."""
@@ -148,7 +148,7 @@ class FeatureFlagService:
         if flag_name in self._flags:
             self._flags[flag_name]["value"] = value
             self._flags[flag_name]["enabled"] = enabled
-            self._flags[flag_name]["updated_at"] = datetime.utcnow().isoformat()
+            self._flags[flag_name]["updated_at"] = datetime.now(UTC).isoformat()
         else:
             self._flags[flag_name] = {
                 "enabled": enabled,
@@ -156,8 +156,8 @@ class FeatureFlagService:
                 "type": FlagType.BOOLEAN,
                 "description": "",
                 "rollout_percentage": 100,
-                "created_at": datetime.utcnow().isoformat(),
-                "updated_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(UTC).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
             }
 
     def get_stats(self) -> dict:

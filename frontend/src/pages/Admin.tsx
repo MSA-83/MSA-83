@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { memoryService, agentService, healthService } from '../services/api'
 
-type Tab = 'overview' | 'analytics' | 'users' | 'system'
+type Tab = 'overview' | 'analytics' | 'users' | 'flags' | 'system'
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>('overview')
@@ -45,6 +45,17 @@ export default function AdminPage() {
     refetchInterval: 30000,
   })
 
+  const { data: featureFlags, isLoading: flagsLoading, refetch: refetchFlags } = useQuery({
+    queryKey: ['feature-flags'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/flags')
+      const data = await res.json()
+      return data.data as Record<string, { enabled: boolean; value: unknown; type: string; description: string }>
+    },
+  })
+
+  const [flagStates, setFlagStates] = useState<Record<string, boolean>>({})
+
   const systemChecks = [
     { name: 'API Server', status: health?.components?.api, icon: '🌐' },
     { name: 'Memory System', status: health?.components?.memory, icon: '🧠' },
@@ -75,6 +86,7 @@ export default function AdminPage() {
     { id: 'overview', label: 'Overview' },
     { id: 'analytics', label: 'Analytics' },
     { id: 'users', label: 'Top Users' },
+    { id: 'flags', label: 'Feature Flags' },
     { id: 'system', label: 'System' },
   ]
 
@@ -228,6 +240,71 @@ export default function AdminPage() {
     </div>
   )
 
+  const handleToggleFlag = async (flagName: string, enabled: boolean) => {
+    try {
+      await fetch(`/api/admin/flags/${flagName}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled, value: null }),
+      })
+      setFlagStates(prev => ({ ...prev, [flagName]: enabled }))
+      await refetchFlags()
+    } catch {
+      addLog(`Failed to update flag: ${flagName}`)
+    }
+  }
+
+  const renderFlags = () => (
+    <div className="card">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-titanium-100">Feature Flags</h3>
+        <span className="text-sm text-titanium-400">
+          {featureFlags ? Object.keys(featureFlags).length : 0} flags configured
+        </span>
+      </div>
+
+      {flagsLoading ? (
+        <p className="text-titanium-500">Loading...</p>
+      ) : featureFlags ? (
+        <div className="space-y-3">
+          {Object.entries(featureFlags).map(([name, flag]) => {
+            const isEnabled = flagStates[name] ?? flag.enabled
+            return (
+              <div key={name} className="flex items-center justify-between py-3 px-4 bg-titanium-900/50 rounded-lg">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-titanium-200 font-mono text-sm">{name}</span>
+                    <span className="px-2 py-0.5 rounded text-xs bg-titanium-700 text-titanium-300">
+                      {flag.type}
+                    </span>
+                  </div>
+                  <p className="text-xs text-titanium-500 mt-1">{flag.description}</p>
+                  <p className="text-xs text-titanium-600 mt-0.5">
+                    Value: {typeof flag.value === 'object' ? JSON.stringify(flag.value) : String(flag.value)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleToggleFlag(name, !isEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    isEnabled ? 'bg-green-500' : 'bg-titanium-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="text-titanium-500">No feature flags available</p>
+      )}
+    </div>
+  )
+
   const renderSystem = () => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
@@ -303,6 +380,7 @@ export default function AdminPage() {
       {activeTab === 'overview' && renderOverview()}
       {activeTab === 'analytics' && renderAnalytics()}
       {activeTab === 'users' && renderUsers()}
+      {activeTab === 'flags' && renderFlags()}
       {activeTab === 'system' && renderSystem()}
     </div>
   )
