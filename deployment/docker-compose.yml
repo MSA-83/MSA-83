@@ -137,6 +137,39 @@ services:
     networks:
       - titanium
 
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: titanium-worker
+    command: arq backend.services.worker.tasks.WorkerSettings
+    environment:
+      - DATABASE_URL=postgresql://titanium:titanium@postgres:5432/titanium
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_QUEUE_DB=1
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - EXPORT_DIR=/tmp/exports
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
+      - NOTIFICATION_FROM=noreply@titanium.ai
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend:ro
+      - ./agents:/app/agents:ro
+      - ./memory:/app/memory:ro
+      - export_data:/tmp/exports
+    healthcheck:
+      test: ["CMD", "python", "-c", "import asyncio; from arq.connections import ArqRedis, RedisSettings; async def check(): r = await ArqRedis.from_settings(RedisSettings(host='redis', port=6379, database=1)); await r.close(); print('OK'); asyncio.run(check())"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - titanium
+
   model-puller:
     image: ollama/ollama:latest
     container_name: titanium-model-puller
@@ -160,6 +193,7 @@ volumes:
   redis_data:
   qdrant_data:
   ollama_data:
+  export_data:
 
 networks:
   titanium:

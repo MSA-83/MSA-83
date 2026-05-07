@@ -113,9 +113,10 @@ class TestWebhookDispatch:
     """Test webhook dispatch."""
 
     @pytest.mark.asyncio
+    @patch("backend.services.webhook_service.enqueue_webhook")
     @patch("backend.services.webhook_service.get_db")
-    async def test_dispatch_matching_webhook(self, mock_get_db):
-        """Should dispatch to matching webhooks."""
+    async def test_dispatch_matching_webhook(self, mock_get_db, mock_enqueue):
+        """Should dispatch to matching webhooks via queue."""
         mock_webhook = MagicMock()
         mock_webhook.id = "wh-1"
         mock_webhook.url = "https://example.com/webhook"
@@ -129,18 +130,17 @@ class TestWebhookDispatch:
         mock_db = MagicMock()
         mock_db.query.return_value.filter.return_value.all.return_value = [mock_webhook]
         mock_get_db.return_value = iter([mock_db])
+        mock_enqueue.return_value = "job-123"
 
-        with patch.object(webhook_service, "_send_webhook", new_callable=AsyncMock) as mock_send:
-            mock_send.return_value = True
+        result = await webhook_service.dispatch("chat.message.sent", {"conversation_id": "conv-1"})
 
-            result = await webhook_service.dispatch("chat.message.sent", {"conversation_id": "conv-1"})
-
-            assert result == 1
-            mock_send.assert_called_once()
+        assert result == 1
+        mock_enqueue.assert_called_once()
 
     @pytest.mark.asyncio
+    @patch("backend.services.webhook_service.enqueue_webhook")
     @patch("backend.services.webhook_service.get_db")
-    async def test_dispatch_no_matching_webhook(self, mock_get_db):
+    async def test_dispatch_no_matching_webhook(self, mock_get_db, mock_enqueue):
         """Should not dispatch to non-matching webhooks."""
         mock_webhook = MagicMock()
         mock_webhook.id = "wh-1"
@@ -156,26 +156,22 @@ class TestWebhookDispatch:
         mock_db.query.return_value.filter.return_value.all.return_value = [mock_webhook]
         mock_get_db.return_value = iter([mock_db])
 
-        with patch.object(webhook_service, "_send_webhook", new_callable=AsyncMock) as mock_send:
-            result = await webhook_service.dispatch("chat.message.sent", {"conversation_id": "conv-1"})
+        result = await webhook_service.dispatch("chat.message.sent", {"conversation_id": "conv-1"})
 
-            assert result == 0
-            mock_send.assert_not_called()
+        assert result == 0
+        mock_enqueue.assert_not_called()
 
     @pytest.mark.asyncio
     @patch("backend.services.webhook_service.get_db")
     async def test_dispatch_inactive_webhook(self, mock_get_db):
         """Should not dispatch to inactive webhooks."""
-        # Inactive webhooks are filtered out by the query itself
         mock_db = MagicMock()
         mock_db.query.return_value.filter.return_value.all.return_value = []
         mock_get_db.return_value = iter([mock_db])
 
-        with patch.object(webhook_service, "_send_webhook", new_callable=AsyncMock) as mock_send:
-            result = await webhook_service.dispatch("chat.message.sent", {"conversation_id": "conv-1"})
+        result = await webhook_service.dispatch("chat.message.sent", {"conversation_id": "conv-1"})
 
-            assert result == 0
-            mock_send.assert_not_called()
+        assert result == 0
 
 
 class TestWebhookSignature:

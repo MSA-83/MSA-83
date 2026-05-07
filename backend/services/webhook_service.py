@@ -11,6 +11,7 @@ import httpx
 
 from backend.models.database import get_db
 from backend.models.webhook import Webhook
+from backend.services.worker import enqueue_webhook
 
 SUPPORTED_EVENTS = [
     "chat.message.sent",
@@ -108,7 +109,7 @@ class WebhookService:
             db.close()
 
     async def dispatch(self, event_type: str, payload: dict) -> int:
-        """Dispatch an event to all matching webhooks."""
+        """Dispatch an event to all matching webhooks via the background queue."""
         db = next(get_db())
         try:
             webhooks = db.query(Webhook).filter(
@@ -121,51 +122,19 @@ class WebhookService:
                 if event_type not in webhook.events and "*" not in webhook.events:
                     continue
 
-                success = await self._send_webhook(webhook, event_type, payload)
-                if success:
-                    webhook.last_delivery_at = datetime.now(UTC)
-                    webhook.last_delivery_status = "success"
-                    webhook.failure_count = 0
-                    dispatched += 1
-                else:
-                    webhook.failure_count += 1
-                    webhook.last_delivery_status = "failed"
+                job_id = await enqueue_webhook(
+                    webhook_url=webhook.url,
+                    event_type=event_type,
+                    payload=payload,
+                    secret=webhook.secret,
+                )
 
-            db.commit()
+                if job_id:
+                    dispatched += 1
+
             return dispatched
         finally:
             db.close()
-
-    async def _send_webhook(self, webhook: Webhook, event_type: str, payload: dict) -> bool:
-        """Send a webhook payload to the endpoint."""
-        body = {
-            "id": str(uuid.uuid4()),
-            "type": event_type,
-            "timestamp": datetime.now(UTC).isoformat(),
-            "data": payload,
-        }
-
-        body_json = json.dumps(body, separators=(",", ":"))
-        signature = hmac.new(
-            webhook.secret.encode(),
-            body_json.encode(),
-            hashlib.sha256,
-        ).hexdigest()
-
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.post(
-                    webhook.url,
-                    content=body_json,
-                    headers={
-                        "Content-Type": "application/json",
-                        "X-Webhook-Signature": f"sha256={signature}",
-                        "X-Webhook-Event": event_type,
-                    },
-                )
-                return 200 <= response.status_code < 300
-        except Exception:
-            return False
 
     def get_supported_events(self) -> list[str]:
         """Get list of supported webhook events."""
