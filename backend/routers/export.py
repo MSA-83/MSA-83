@@ -2,9 +2,10 @@
 
 import json
 
-from fastapi import APIRouter, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 
+from backend.services.auth.auth_service import get_current_user
 from backend.services.conversation_service import conversation_service
 from backend.services.export import CSVExporter, JSONExporter, MarkdownExporter
 from backend.services.usage_tracker import usage_tracker
@@ -115,5 +116,46 @@ async def export_memory(
         media_type=media_type,
         headers={
             "Content-Disposition": f'attachment; filename="memory_export.{ext}"',
+        },
+    )
+
+
+@router.get("/gdpr/me")
+async def export_my_data(current_user: dict = Depends(get_current_user)):
+    """Export all personal data for the authenticated user (GDPR compliance)."""
+    user_id = current_user["user_id"]
+    email = current_user["email"]
+
+    conversations = conversation_service.get_user_conversations(user_id)
+    usage = usage_tracker.get_user_usage(user_id, days=365)
+
+    export_data = {
+        "export_type": "gdpr_personal_data",
+        "user": {
+            "id": user_id,
+            "email": email,
+            "tier": current_user.get("tier", "free"),
+        },
+        "conversations": [
+            {
+                "id": c["id"],
+                "title": c["title"],
+                "created_at": c.get("created_at"),
+                "message_count": len(conversation_service.get_messages(c["id"], limit=10000)),
+                "messages": conversation_service.get_messages(c["id"], limit=10000),
+            }
+            for c in conversations
+        ],
+        "usage": usage,
+        "exported_at": __import__("datetime").datetime.now(__import__("datetime").UTC).isoformat(),
+    }
+
+    content = json.dumps(export_data, indent=2, default=str)
+
+    return Response(
+        content=content,
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="gdpr_export_{user_id}.json"',
         },
     )
