@@ -1,187 +1,194 @@
 # Titanium - Enterprise AI Platform
 
+[![CI](https://github.com/MSA-83/MSA-83/actions/workflows/ci.yml/badge.svg)](https://github.com/MSA-83/MSA-83/actions/workflows/ci.yml)
+[![Deploy](https://github.com/MSA-83/MSA-83/actions/workflows/deploy.yml/badge.svg)](https://github.com/MSA-83/MSA-83/actions/workflows/deploy.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Autonomous AI-driven platform with RAG memory, multi-agent orchestration, and zero-cost free-tier deployment.
-
-## Architecture
-
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  Frontend   │───▶│   Backend   │───▶│   Ollama    │
-│  Vite+React │    │   FastAPI   │    │  Inference  │
-└─────────────┘    └──────┬──────┘    └─────────────┘
-                          │
-              ┌───────────┼───────────┬──────────┐
-              ▼           ▼           ▼          ▼
-         ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
-         │ Qdrant │ │ Neon   │ │ Stripe │ │ Redis  │
-         │ Vector │ │ Postgres│ │ Billing│ │ Cache  │
-         └────────┘ └────────┘ └────────┘ └────────┘
-```
 
 ## Features
 
-- **RAG Memory System** - Document chunking (fixed, semantic, markdown), embedding (Ollama, Groq, HuggingFace), vector storage (Qdrant, Chroma)
-- **Multi-Agent Orchestration** - CrewAI agents + LangGraph workflows (code, research, analysis, security, writing)
-- **Real-time Chat** - HTTP SSE streaming + WebSocket for token-by-token responses
-- **Authentication** - JWT-based auth with bcrypt password hashing, token refresh
-- **Billing** - Stripe integration with 4 tiers: Personal (free), Cyber Ops ($29/mo), Enterprise ($99/mo), Defense (custom)
-- **File Processing** - PDF, DOCX, TXT, MD, CSV, JSON ingestion
-- **Caching** - Redis-backed caching with in-memory fallback
-- **Rate Limiting** - Per-tier rate limits (requests, tokens, concurrent tasks)
-- **Feature Flags** - Runtime feature toggles with rollout percentages
-- **Email Notifications** - Resend integration (welcome, billing, security, task alerts)
-- **Monitoring** - Prometheus metrics + Grafana dashboards with alert rules
-- **CI/CD** - GitHub Actions pipeline (lint → test → build → deploy)
-
-## Quick Start
-
-### Prerequisites
-- Python 3.11+
-- Node.js 20+
-- Docker & Docker Compose (optional)
-- Ollama (for local inference)
-
-### Local Development
-
-1. **Clone and configure**
-```bash
-cp .env.example .env
-# Edit .env with your API keys
-```
-
-2. **Start Ollama**
-```bash
-ollama pull llama3
-ollama pull nomic-embed-text
-ollama serve
-```
-
-3. **Backend**
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-4. **Frontend**
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-5. **Open** http://localhost:3000
-
-### Docker Compose
-
-```bash
-docker compose up -d
-```
-
-Services:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- Ollama: http://localhost:11434
-- Qdrant: http://localhost:6333
-- Qdrant Dashboard: http://localhost:6335
-- Prometheus: http://localhost:9090
-- Grafana: http://localhost:3001 (admin/titanium)
-- Redis: localhost:6379
-
-## API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/health` | Health check |
-| GET | `/metrics` | Prometheus metrics |
-| POST | `/api/auth/register` | Register user |
-| POST | `/api/auth/login` | Login |
-| POST | `/api/auth/refresh` | Refresh token |
-| GET | `/api/auth/me` | Get current user |
-| POST | `/api/chat/` | Send message |
-| POST | `/api/chat/stream` | Stream response (SSE) |
-| POST | `/api/memory/ingest` | Ingest text |
-| POST | `/api/memory/ingest-file` | Upload file |
-| POST | `/api/memory/search` | Search memory |
-| POST | `/api/agents/task` | Create agent task |
-| GET | `/api/agents/status` | Agent status |
-| GET | `/api/billing/pricing` | Get pricing tiers |
-| WS | `/ws/chat/{client_id}` | WebSocket chat |
-| WS | `/ws/agents/{client_id}` | WebSocket agents |
-
-## Pricing Tiers
-
-| Tier | Monthly | Features |
-|------|---------|----------|
-| Personal | Free | 100 queries, 10 docs, 1 agent |
-| Cyber Ops | $29/mo | 5K queries, 500 docs, all agents |
-| Enterprise | $99/mo | Unlimited, dedicated, SSO |
-| Defense | Contact | Air-gapped, classified, FedRAMP |
-
-## Project Structure
-
-```
-titanium/
-├── agents/              # Agent framework
-│   ├── orchestrator/    # CrewAI crew builder
-│   ├── workflows/       # LangGraph workflows
-│   ├── memory/          # Agent memory
-│   └── tools/           # Custom tools
-├── backend/             # FastAPI backend
-│   ├── routers/         # API endpoints
-│   ├── services/        # Business logic
-│   │   ├── auth/        # JWT authentication
-│   │   ├── billing/     # Stripe integration
-│   │   ├── cache/       # Redis caching
-│   │   ├── features/    # Feature flags
-│   │   ├── notifications/ # Email service
-│   │   └── processing/  # File processing
-│   ├── middleware/      # Security + errors
-│   ├── models/          # SQLAlchemy models
-│   └── tests/           # Test suite
-├── frontend/            # Vite + React
-│   └── src/
-│       ├── components/  # React components
-│       ├── pages/       # Page views
-│       ├── hooks/       # Custom hooks
-│       └── services/    # API clients
-├── memory/              # RAG memory system
-│   ├── chunkers/        # Document chunking
-│   ├── embeddings/      # Embedding services
-│   ├── stores/          # Vector stores
-│   └── pipelines/       # RAG pipeline
-├── infra/               # Infrastructure
-│   ├── terraform/       # AWS IaC
-│   └── k8s/             # Kubernetes manifests
-├── monitoring/          # Prometheus + Grafana
-├── deployment/          # Deploy scripts
-└── .github/workflows/   # CI/CD pipeline
-```
+- **Multi-Agent System**: Research, Security, Code, and Summarizer agents with 8+ tools
+- **RAG Memory**: Document ingestion, vector search, semantic chunking
+- **Multi-Model LLM**: Ollama (local), Groq (cloud), OpenAI with automatic fallback
+- **Real-time Chat**: REST, WebSocket, and SSE streaming with model picker
+- **OAuth Auth**: GitHub & Google login, JWT sessions, RBAC tier system
+- **Admin Dashboard**: Analytics, feature flags, audit logs, user management
+- **Stripe Billing**: 4-tier pricing (Free/Pro/Enterprise/Defense)
+- **Security**: Per-tier rate limiting, SSRF protection, prompt injection defense
+- **Observability**: OpenTelemetry tracing, Prometheus metrics, structured logging
+- **Background Tasks**: ARQ queue for document processing and notifications
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Vite + React 18 + TypeScript + TailwindCSS |
-| Backend | FastAPI + Python 3.11 + Pydantic |
-| Database | SQLite (dev) / Neon Postgres (prod) + SQLAlchemy |
-| Cache | Redis (production) / In-memory fallback |
-| Vector DB | Qdrant / Chroma / InMemory |
-| Inference | Ollama (local) / Groq (cloud) |
-| Agents | CrewAI + LangGraph |
-| Auth | JWT + bcrypt |
-| Billing | Stripe |
-| Email | Resend |
-| Monitoring | Prometheus + Grafana |
-| Deploy | Docker Compose / Railway / Kubernetes |
+| Frontend | Vite + React + TypeScript + TailwindCSS |
+| Backend | FastAPI + Python 3.13 |
+| Database | PostgreSQL (Neon) + SQLAlchemy |
+| Vector DB | Qdrant / Chroma |
+| Cache/Queue | Redis (Upstash) + ARQ |
+| LLM | Ollama / Groq / OpenAI |
+| Agents | LangGraph + CrewAI |
+| Deploy | Railway / Docker Compose |
+| Monitoring | Prometheus + Grafana + OpenTelemetry |
+| CI/CD | GitHub Actions |
 
-## Security
+## Quick Start
 
-- P0: JWT auth, bcrypt hashing, API key rotation, RBAC
-- P1: Prompt injection detection, rate limiting, security headers, input validation
-- P2: Agent sandboxing, tool access control, execution timeouts
-- P3: Multi-tenant isolation, audit logging, CORS policy
+### Local Development
+
+```bash
+# Clone and install
+git clone https://github.com/MSA-83/MSA-83.git titanium
+cd titanium
+make install
+
+# Start dev servers
+make dev
+
+# Or use Docker Compose (includes PostgreSQL, Redis, Qdrant, Ollama)
+make docker
+```
+
+**URLs after start:**
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- Qdrant Dashboard: http://localhost:6333/dashboard
+
+### One-Command Deploy
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new)
+
+## Project Structure
+
+```
+titanium/
+├── agents/                    # Multi-agent system
+│   ├── orchestrator/          # Master coordinator
+│   ├── executors/             # Research, Security, Code, Summarizer
+│   └── tools/                 # Web search, CVE lookup, code exec, file ops
+├── backend/
+│   ├── routers/               # FastAPI endpoints (auth, chat, memory, etc.)
+│   ├── services/              # Business logic (auth, billing, cache, queue)
+│   ├── security/              # RBAC, rate limiting, input validation
+│   └── middleware/            # Analytics, caching, security, rate limiting
+├── frontend/src/
+│   ├── components/            # React UI components
+│   ├── pages/                 # Chat, Admin, Memory, Agents, Settings
+│   └── hooks/                 # WebSocket, notifications, auth
+├── memory/                    # RAG pipeline
+│   ├── chunkers/              # Fixed, sentence, semantic, markdown
+│   ├── embeddings/            # Ollama, OpenAI embedding models
+│   └── stores/                # Qdrant, Chroma vector stores
+├── deployment/
+│   ├── docker-compose.yml     # 6-service local stack
+│   └── railway/               # Railway deployment config
+└── .github/workflows/         # CI/CD pipelines
+```
+
+## API Reference
+
+### Authentication
+```bash
+POST /api/auth/register     # Create account
+POST /api/auth/login        # Get JWT tokens
+GET  /api/auth/me           # Current user
+GET  /api/auth/rate-limit   # Usage stats
+```
+
+### Chat
+```bash
+POST /api/chat/             # Send message (supports SSE streaming)
+GET  /api/chat/models       # List available LLM models
+GET  /api/chat/ws/{id}      # WebSocket endpoint
+```
+
+### Memory
+```bash
+POST /api/memory/upload     # Upload document
+GET  /api/memory/documents  # List documents
+POST /api/memory/query      # RAG retrieval
+```
+
+### Admin (Enterprise+ tier)
+```bash
+GET  /api/admin/analytics/system   # System metrics
+GET  /api/admin/analytics/top-users # Top users
+GET  /api/admin/flags              # Feature flags
+PUT  /api/admin/flags/{name}       # Update flag (defense tier)
+GET  /api/admin/audit/logs         # Audit trail
+GET  /api/export/gdpr/me           # Personal data export
+```
+
+## Rate Limits
+
+| Tier | RPM | RPH | Max Tokens | File Size |
+|------|-----|-----|------------|-----------|
+| Free | 10 | 100 | 2,048 | 5MB |
+| Pro | 60 | 1,000 | 8,192 | 25MB |
+| Enterprise | 300 | 10,000 | 32,768 | 50MB |
+| Defense | ∞ | ∞ | ∞ | ∞ |
+
+## Testing
+
+```bash
+make test-backend     # 283 pytest tests
+make test-frontend    # 27 vitest tests
+make e2e              # 14 Playwright tests
+make lint             # Ruff + ESLint + TypeScript
+```
+
+## Environment Variables
+
+### Required
+| Variable | Description |
+|----------|------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET_KEY` | Secret for signing JWT tokens |
+
+### Optional
+| Variable | Description |
+|----------|------------|
+| `REDIS_URL` | Redis URL for caching/queue |
+| `GROQ_API_KEY` | Groq API key for cloud LLM |
+| `OPENAI_API_KEY` | OpenAI API key |
+| `GITHUB_CLIENT_ID` | GitHub OAuth client ID |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `QDRANT_URL` | Qdrant Cloud URL |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OpenTelemetry collector URL |
+
+## Architecture
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐
+│ Frontend │────▶│  Backend │────▶│   LLM    │
+│  (React) │     │ (FastAPI)│     │(Ollama/  │
+└──────────┘     └────┬─────┘     │ Groq)    │
+                      │           └──────────┘
+              ┌───────┼───────┐
+              ▼       ▼       ▼
+         ┌──────┐ ┌──────┐ ┌──────┐
+         │PostgreSQL│ │Redis │ │Qdrant│
+         └──────┘ └──────┘ └──────┘
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Acknowledgments
+
+- [LangGraph](https://github.com/langchain-ai/langgraph) for agent orchestration
+- [CrewAI](https://github.com/crewAIInc/crewAI) for multi-agent collaboration
+- [FastAPI](https://fastapi.tiangolo.com/) for the backend framework
+- [Qdrant](https://qdrant.tech/) for vector search
