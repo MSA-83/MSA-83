@@ -87,7 +87,7 @@ jobs:
         run: pytest backend/tests/test_prompt_injection.py backend/tests/test_input_validation.py backend/tests/test_rbac.py backend/tests/test_ssrf.py -v
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v6
         with:
           file: ./coverage.xml
 
