@@ -16,5 +16,5 @@ redis>=5.2.0
 langgraph>=0.2.60
 langchain-core>=0.3.28
 qdrant-client>=1.12.0
-chromadb>=0.5.23
+chromadb>=1.5.9
 crewai>=0.85.0
