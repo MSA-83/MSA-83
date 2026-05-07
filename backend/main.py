@@ -14,6 +14,7 @@ from backend.middleware.security import setup_security_middleware
 from backend.routers import admin, agents, auth, billing, chat, conversations, export, health, memory, oauth, websocket
 from backend.services.analytics.analytics_service import AnalyticsService
 from backend.services.openapi import customize_openapi
+from backend.utils.api_versioning import API_V1_PREFIX
 
 
 @asynccontextmanager
@@ -76,6 +77,17 @@ app.include_router(websocket.router, tags=["websocket"])
 app.include_router(conversations.router, prefix="/api/conversations", tags=["conversations"])
 app.include_router(export.router, prefix="/api/export", tags=["export"])
 
+app.include_router(health.router, prefix=f"{API_V1_PREFIX}", tags=["health-v1"])
+app.include_router(admin.router, prefix=f"{API_V1_PREFIX}", tags=["admin-v1"])
+app.include_router(auth.router, prefix=f"{API_V1_PREFIX}/auth", tags=["auth-v1"])
+app.include_router(oauth.router, prefix=f"{API_V1_PREFIX}/auth/oauth", tags=["oauth-v1"])
+app.include_router(chat.router, prefix=f"{API_V1_PREFIX}/chat", tags=["chat-v1"])
+app.include_router(memory.router, prefix=f"{API_V1_PREFIX}/memory", tags=["memory-v1"])
+app.include_router(agents.router, prefix=f"{API_V1_PREFIX}/agents", tags=["agents-v1"])
+app.include_router(billing.router, prefix=f"{API_V1_PREFIX}/billing", tags=["billing-v1"])
+app.include_router(conversations.router, prefix=f"{API_V1_PREFIX}/conversations", tags=["conversations-v1"])
+app.include_router(export.router, prefix=f"{API_V1_PREFIX}/export", tags=["export-v1"])
+
 
 @app.get("/")
 async def root():
@@ -83,4 +95,18 @@ async def root():
         "name": "Titanium Enterprise AI Platform",
         "version": "0.1.0",
         "status": "running",
+        "api_versions": ["v1"],
+        "docs": "/docs",
+        "api_v1": "/api/v1",
+    }
+
+
+@app.get("/api/version")
+async def get_api_version():
+    """Get API version information."""
+    return {
+        "current": "v1",
+        "available": ["v1"],
+        "deprecated": [],
+        "base_url_v1": "/api/v1",
     }
