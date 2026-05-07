@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from backend.services.auth.auth_service import get_current_user
 from backend.services.conversation_service import conversation_service
-from backend.services.export import CSVExporter, JSONExporter, MarkdownExporter
+from backend.services.export import CSVExporter, JSONExporter, MarkdownExporter, PDFExporter
 from backend.services.usage_tracker import usage_tracker
 
 router = APIRouter()
@@ -21,8 +21,8 @@ class ExportRequest(BaseModel):
 
 @router.post("/conversation")
 async def export_conversation(request: ExportRequest):
-    """Export a conversation in the specified format."""
-    if request.format not in ("md", "json", "csv"):
+    """Export a conversation in the specified format (md, json, csv, pdf)."""
+    if request.format not in ("md", "json", "csv", "pdf"):
         raise HTTPException(status_code=400, detail=f"Unsupported format: {request.format}")
 
     conversation = conversation_service.get_conversation(request.conversation_id)
@@ -47,6 +47,14 @@ async def export_conversation(request: ExportRequest):
         )
         media_type = "application/json"
         ext = "json"
+    elif request.format == "pdf":
+        content = PDFExporter.export_conversation(
+            conversation["title"],
+            messages,
+            request.include_metadata,
+        )
+        media_type = "application/pdf"
+        ext = "pdf"
     else:
         content = CSVExporter.export_conversation(messages)
         media_type = "text/csv"
