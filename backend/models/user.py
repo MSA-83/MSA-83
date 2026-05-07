@@ -30,8 +30,6 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
-    usage: Mapped["UserUsage"] = None
-
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, tier={self.tier.value})>"
 

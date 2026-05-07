@@ -7,10 +7,12 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
+from backend.middleware.analytics import AnalyticsMiddleware
 from backend.middleware.errors import setup_error_handlers
 from backend.middleware.rate_limit import RateLimitMiddleware
 from backend.middleware.security import setup_security_middleware
-from backend.routers import agents, auth, billing, chat, conversations, export, health, memory, oauth, websocket
+from backend.routers import admin, agents, auth, billing, chat, conversations, export, health, memory, oauth, websocket
+from backend.services.analytics.analytics_service import AnalyticsService
 from backend.services.openapi import customize_openapi
 
 
@@ -40,6 +42,7 @@ customize_openapi(app)
 setup_security_middleware(app)
 setup_error_handlers(app)
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(AnalyticsMiddleware, analytics_service=AnalyticsService())
 
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
@@ -62,6 +65,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router, prefix="/api", tags=["health"])
+app.include_router(admin.router, prefix="/api", tags=["admin"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(oauth.router, prefix="/api/auth/oauth", tags=["oauth"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
