@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from backend.services.billing.stripe_service import StripeService
+from backend.services.cache.decorator import cached
 
 router = APIRouter()
 stripe_service = StripeService()
@@ -25,8 +26,9 @@ class CheckoutResponse(BaseModel):
 
 
 @router.get("/pricing")
+@cached("pricing", ttl=600)
 async def get_pricing():
-    """Get all pricing tiers."""
+    """Get all pricing tiers. Cached for 10 minutes."""
     return await stripe_service.get_pricing()
 
 
