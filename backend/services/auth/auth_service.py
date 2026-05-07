@@ -228,6 +228,40 @@ class AuthService:
                 )
         return None
 
+    def get_user_by_email(self, email: str) -> UserResponse | None:
+        """Get user by email address."""
+        user = self._users.get(email)
+        if user:
+            return UserResponse(
+                id=user["id"],
+                email=user["email"],
+                tier=user["tier"],
+                created_at=user["created_at"],
+            )
+        return None
+
+    def login_by_email(self, email: str, password: str) -> TokenResponse:
+        """Login using email and password (used by OAuth flow)."""
+        user = self._users.get(email)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+            )
+
+        access_token = self.create_access_token(
+            user_id=user["id"],
+            email=user["email"],
+            tier=user["tier"],
+        )
+        refresh_token = self.create_refresh_token(user["id"])
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=AuthConfig.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
+
 
 auth_service = AuthService()
 

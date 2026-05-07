@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { memoryService } from '../services/api'
+import FileUpload from '../components/FileUpload'
 
 export default function MemoryPage() {
   const [inputText, setInputText] = useState('')
@@ -21,6 +22,14 @@ export default function MemoryPage() {
       }),
     onSuccess: () => {
       setInputText('')
+      setSource('')
+    },
+  })
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) =>
+      memoryService.ingestFile(file, source || undefined),
+    onSuccess: () => {
       setSource('')
     },
   })
@@ -54,13 +63,25 @@ export default function MemoryPage() {
               />
             </div>
 
+            <FileUpload
+              onUpload={(file) => uploadMutation.mutateAsync(file)}
+              disabled={uploadMutation.isPending}
+              maxSizeMB={10}
+            />
+
+            <div className="relative flex items-center py-2">
+              <div className="flex-grow border-t border-titanium-700" />
+              <span className="flex-shrink mx-4 text-sm text-titanium-500">or paste content</span>
+              <div className="flex-grow border-t border-titanium-700" />
+            </div>
+
             <div>
               <label className="block text-sm text-titanium-300 mb-1">Content</label>
               <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Paste document content here..."
-                className="input-primary w-full h-48 resize-none"
+                className="input-primary w-full h-32 resize-none"
               />
             </div>
 
@@ -75,6 +96,12 @@ export default function MemoryPage() {
             {ingestMutation.isSuccess && (
               <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
                 Document ingested successfully! ({ingestMutation.data.chunks_stored} chunks stored)
+              </div>
+            )}
+
+            {uploadMutation.isSuccess && (
+              <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-sm">
+                File uploaded successfully! ({uploadMutation.data.chunks_stored} chunks stored)
               </div>
             )}
           </div>

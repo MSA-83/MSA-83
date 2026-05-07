@@ -17,6 +17,7 @@ interface AuthContextType {
   register: (email: string, password: string, tier?: string) => Promise<void>
   logout: () => void
   refreshToken: () => Promise<boolean>
+  loginWithToken: (accessToken: string, refreshToken: string, user: Partial<User>) => void
   isAuthenticated: boolean
 }
 
@@ -142,6 +143,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (userData) setUser(userData)
   }
 
+  const loginWithToken = (accessToken: string, refreshToken: string, user: Partial<User>) => {
+    localStorage.setItem('accessToken', accessToken)
+    localStorage.setItem('refreshToken', refreshToken)
+    setAccessToken(accessToken)
+    setUser({
+      id: user.id || user.email || '',
+      email: user.email || '',
+      tier: user.tier || 'free',
+    })
+  }
+
   const logout = useCallback(() => {
     localStorage.removeItem('accessToken')
     localStorage.removeItem('refreshToken')
@@ -168,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         refreshToken,
+        loginWithToken,
         isAuthenticated: !!user,
       }}
     >

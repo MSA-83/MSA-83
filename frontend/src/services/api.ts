@@ -180,6 +180,18 @@ export const memoryService = {
     return response.data
   },
 
+  ingestFile: async (file: File, source?: string, chunkerStrategy = 'fixed'): Promise<MemoryIngestResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (source) formData.append('source', source)
+    formData.append('chunker_strategy', chunkerStrategy)
+
+    const response = await api.post<MemoryIngestResponse>('/memory/ingest-file', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data
+  },
+
   search: async (
     query: string,
     topK = 5,
