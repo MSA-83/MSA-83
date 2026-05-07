@@ -1,0 +1,166 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: titanium-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://titanium:titanium@postgres:5432/titanium
+      - REDIS_URL=redis://:titanium@redis:6379/0
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - LLM_PROVIDER=ollama
+      - JWT_SECRET_KEY=titanium-dev-secret-key-change-in-production-2026
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - FRONTEND_URL=http://localhost
+      - TITANIUM_TESTING=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend:ro
+      - ./agents:/app/agents:ro
+      - ./memory:/app/memory:ro
+      - ./prompts:/app/prompts:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - titanium
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - VITE_API_URL=http://localhost:8000
+    container_name: titanium-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - titanium
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: titanium-postgres
+    environment:
+      - POSTGRES_DB=titanium
+      - POSTGRES_USER=titanium
+      - POSTGRES_PASSWORD=titanium
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U titanium -d titanium"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - titanium
+
+  redis:
+    image: redis:7-alpine
+    container_name: titanium-redis
+    command: redis-server --requirepass titanium --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "titanium", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - titanium
+
+  qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: titanium-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - titanium
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: titanium-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - titanium
+
+  model-puller:
+    image: ollama/ollama:latest
+    container_name: titanium-model-puller
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Ollama..."
+        sleep 10
+        echo "Pulling llama3 model..."
+        ollama pull llama3
+        echo "Models pulled successfully"
+        exit 0
+    networks:
+      - titanium
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  ollama_data:
+
+networks:
+  titanium:
+    driver: bridge

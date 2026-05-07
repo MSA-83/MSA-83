@@ -1,0 +1,27 @@
+# Backend
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.git/
+node_modules/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Docs & misc
+*.md
+LICENSE
+AGENTS.md
+
+# Infra (not needed in container)
+infra/
+monitoring/

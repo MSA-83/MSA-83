@@ -101,19 +101,33 @@ load-test:
 	@.venv/bin/python backend/tests/load_test.py
 
 docker:
-	@docker compose up -d
+	@echo "Starting Titanium stack..."
+	@docker compose -f deployment/docker-compose.yml up -d
+	@echo "Waiting for services to be ready..."
+	@sleep 5
+	@echo "Backend:  http://localhost:8000"
+	@echo "Frontend: http://localhost:80"
+	@echo "API Docs: http://localhost:8000/docs"
+	@echo "Qdrant:   http://localhost:6333/dashboard"
+	@docker compose -f deployment/docker-compose.yml ps
 
 docker-down:
-	@docker compose down
+	@docker compose -f deployment/docker-compose.yml down
 
 docker-build:
-	@docker compose build --no-cache
+	@docker compose -f deployment/docker-compose.yml build --no-cache
 
 docker-logs:
-	@docker compose logs -f
+	@docker compose -f deployment/docker-compose.yml logs -f
 
 docker-ps:
-	@docker compose ps
+	@docker compose -f deployment/docker-compose.yml ps
+
+docker-clean:
+	@docker compose -f deployment/docker-compose.yml down -v
+	@docker system prune -f
+
+docker-restart: docker-down docker
 
 install: install-backend install-frontend
 
