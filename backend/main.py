@@ -20,10 +20,12 @@ from backend.utils.api_versioning import API_V1_PREFIX
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
-    from backend.models.database import init_db
+    from backend.models.database import engine, init_db
     from backend.services.logging.logger import titanium_logger
+    from backend.services.observability.otel import setup_opentelemetry
 
     init_db()
+    setup_opentelemetry(app, engine=engine)
     titanium_logger.info("Titanium backend started", version="0.1.0")
     yield
 
